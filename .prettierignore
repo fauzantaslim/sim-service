@@ -1,0 +1,16 @@
+# Mengabaikan folder
+node_modules/
+docker/
+dist/
+
+# Mengabaikan file konfigurasi
+package.json
+package-lock.json
+tsconfig.json
+tsconfig.jest.json
+eslint.config.mjs
+jest.config.js
+nodemon.json
+
+# Mengabaikan file markdown
+README.md

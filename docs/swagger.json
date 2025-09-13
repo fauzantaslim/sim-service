@@ -1,0 +1,2250 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "SIM Service API",
+    "description": "API untuk Sistem Informasi Manajemen dengan fitur CRUD User, KTP (Kartu Tanda Penduduk), dan SIM (Surat Izin Mengemudi). Mendukung autentikasi JWT, pagination, search, dan sorting.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8026",
+      "description": "Development server"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "ID unik user (auto-generated dengan nanoid)",
+            "example": "V1StGXR8_Z5jdHi6B-myT"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email user",
+            "example": "john.doe@example.com"
+          },
+          "full_name": {
+            "type": "string",
+            "description": "Nama lengkap user",
+            "example": "John Doe"
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Status aktif user",
+            "example": true
+          }
+        }
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "required": ["email", "full_name", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email user (maksimal 255 karakter)",
+            "example": "john.doe@example.com"
+          },
+          "full_name": {
+            "type": "string",
+            "description": "Nama lengkap user (maksimal 255 karakter)",
+            "example": "John Doe"
+          },
+          "password": {
+            "type": "string",
+            "description": "Password user (minimal 8 karakter, maksimal 255 karakter)",
+            "example": "password123"
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Status aktif user (default: true)",
+            "example": true
+          }
+        }
+      },
+      "UpdateUserRequest": {
+        "type": "object",
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "description": "ID user yang akan diupdate",
+            "example": "V1StGXR8_Z5jdHi6B-myT"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email user baru (opsional)",
+            "example": "john.doe.new@example.com"
+          },
+          "full_name": {
+            "type": "string",
+            "description": "Nama lengkap user baru (opsional)",
+            "example": "John Doe Updated"
+          },
+          "password": {
+            "type": "string",
+            "description": "Password user baru (opsional)",
+            "example": "newpassword123"
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Status aktif user baru (opsional)",
+            "example": false
+          }
+        }
+      },
+      "PaginationParams": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Nomor halaman (default: 1)",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Jumlah data per halaman (default: 10, maksimal: 100)",
+            "example": 10
+          },
+          "search": {
+            "type": "string",
+            "description": "Kata kunci pencarian berdasarkan email atau nama",
+            "example": "john"
+          },
+          "sort_by": {
+            "type": "string",
+            "description": "Field untuk sorting (default: created_at)",
+            "example": "created_at"
+          },
+          "sort_order": {
+            "type": "string",
+            "enum": ["asc", "desc"],
+            "description": "Urutan sorting (default: desc)",
+            "example": "desc"
+          }
+        }
+      },
+      "PaginationInfo": {
+        "type": "object",
+        "properties": {
+          "total_items": {
+            "type": "integer",
+            "description": "Total jumlah data",
+            "example": 25
+          },
+          "total_pages": {
+            "type": "integer",
+            "description": "Total jumlah halaman",
+            "example": 3
+          },
+          "current_page": {
+            "type": "integer",
+            "description": "Halaman saat ini",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Jumlah data per halaman",
+            "example": 10
+          },
+          "has_next": {
+            "type": "boolean",
+            "description": "Apakah ada halaman berikutnya",
+            "example": true
+          },
+          "has_prev": {
+            "type": "boolean",
+            "description": "Apakah ada halaman sebelumnya",
+            "example": false
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "status_code": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "description": "Pesan response",
+            "example": "Operasi berhasil"
+          },
+          "data": {
+            "type": "object",
+            "description": "Data response"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "status_code": {
+            "type": "integer",
+            "description": "HTTP status code",
+            "example": 400
+          },
+          "errors": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Pesan error sederhana"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "description": "Path field yang error"
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Pesan error untuk field tersebut"
+                    }
+                  }
+                },
+                "description": "Array error detail untuk validasi"
+              }
+            ]
+          }
+        }
+      },
+      "KTP": {
+        "type": "object",
+        "properties": {
+          "ktp_id": {
+            "type": "string",
+            "description": "ID unik KTP (auto-generated dengan nanoid)",
+            "example": "V1StGXR8_Z5jdHi6B-myT"
+          },
+          "nik": {
+            "type": "string",
+            "description": "Nomor Induk Kependudukan (16 digit)",
+            "example": "1234567890123456"
+          },
+          "alamat": {
+            "type": "string",
+            "description": "Alamat lengkap",
+            "example": "Jl. Merdeka No. 123, Jakarta Pusat"
+          },
+          "tempat_lahir": {
+            "type": "string",
+            "description": "Tempat lahir",
+            "example": "Jakarta"
+          },
+          "tanggal_lahir": {
+            "type": "string",
+            "format": "date",
+            "description": "Tanggal lahir",
+            "example": "1990-01-01"
+          },
+          "jenis_kelamin": {
+            "type": "string",
+            "enum": ["laki_laki", "perempuan"],
+            "description": "Jenis kelamin (laki_laki=Laki-laki, perempuan=Perempuan)",
+            "example": "laki_laki"
+          },
+          "agama": {
+            "type": "string",
+            "enum": [
+              "islam",
+              "kristen",
+              "katolik",
+              "hindu",
+              "buddha",
+              "konghucu",
+              "lainnya"
+            ],
+            "description": "Agama",
+            "example": "islam"
+          },
+          "status_perkawinan": {
+            "type": "string",
+            "enum": ["belum_kawin", "kawin", "cerai_hidup", "cerai_mati"],
+            "description": "Status perkawinan",
+            "example": "belum_kawin"
+          },
+          "gol_darah": {
+            "type": "string",
+            "enum": ["a", "b", "ab", "o", "tidak_tahu"],
+            "description": "Golongan darah",
+            "example": "a"
+          },
+          "pekerjaan": {
+            "type": "string",
+            "description": "Pekerjaan",
+            "example": "Karyawan Swasta"
+          },
+          "kewarganegaraan": {
+            "type": "string",
+            "description": "Kewarganegaraan",
+            "example": "WNI"
+          },
+          "created_by": {
+            "type": "string",
+            "description": "ID user yang membuat KTP",
+            "example": "V1StGXR8_Z5jdHi6B-myT"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Tanggal dibuat",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Tanggal diperbarui",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "creator_name": {
+            "type": "string",
+            "description": "Nama user yang membuat KTP",
+            "example": "John Doe"
+          }
+        }
+      },
+      "CreateKTPRequest": {
+        "type": "object",
+        "required": [
+          "nik",
+          "alamat",
+          "tempat_lahir",
+          "tanggal_lahir",
+          "jenis_kelamin",
+          "agama",
+          "status_perkawinan",
+          "gol_darah",
+          "pekerjaan",
+          "kewarganegaraan"
+        ],
+        "properties": {
+          "nik": {
+            "type": "string",
+            "pattern": "^\\d{16}$",
+            "description": "Nomor Induk Kependudukan (16 digit)",
+            "example": "1234567890123456"
+          },
+          "alamat": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "Alamat lengkap (maksimal 1000 karakter)",
+            "example": "Jl. Merdeka No. 123, Jakarta Pusat"
+          },
+          "tempat_lahir": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Tempat lahir (maksimal 100 karakter)",
+            "example": "Jakarta"
+          },
+          "tanggal_lahir": {
+            "type": "string",
+            "format": "date",
+            "description": "Tanggal lahir (tidak boleh di masa depan)",
+            "example": "1990-01-01"
+          },
+          "jenis_kelamin": {
+            "type": "string",
+            "enum": ["laki_laki", "perempuan"],
+            "description": "Jenis kelamin (laki_laki=Laki-laki, perempuan=Perempuan)",
+            "example": "laki_laki"
+          },
+          "agama": {
+            "type": "string",
+            "enum": [
+              "islam",
+              "kristen",
+              "katolik",
+              "hindu",
+              "buddha",
+              "konghucu",
+              "lainnya"
+            ],
+            "description": "Agama",
+            "example": "islam"
+          },
+          "status_perkawinan": {
+            "type": "string",
+            "enum": ["belum_kawin", "kawin", "cerai_hidup", "cerai_mati"],
+            "description": "Status perkawinan",
+            "example": "belum_kawin"
+          },
+          "gol_darah": {
+            "type": "string",
+            "enum": ["a", "b", "ab", "o", "tidak_tahu"],
+            "description": "Golongan darah",
+            "example": "a"
+          },
+          "pekerjaan": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Pekerjaan (maksimal 100 karakter)",
+            "example": "Karyawan Swasta"
+          },
+          "kewarganegaraan": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "description": "Kewarganegaraan (maksimal 50 karakter)",
+            "example": "WNI"
+          }
+        }
+      },
+      "UpdateKTPRequest": {
+        "type": "object",
+        "properties": {
+          "nik": {
+            "type": "string",
+            "pattern": "^\\d{16}$",
+            "description": "Nomor Induk Kependudukan (16 digit)",
+            "example": "1234567890123456"
+          },
+          "alamat": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000,
+            "description": "Alamat lengkap (maksimal 1000 karakter)",
+            "example": "Jl. Merdeka No. 123, Jakarta Pusat"
+          },
+          "tempat_lahir": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Tempat lahir (maksimal 100 karakter)",
+            "example": "Jakarta"
+          },
+          "tanggal_lahir": {
+            "type": "string",
+            "format": "date",
+            "description": "Tanggal lahir (tidak boleh di masa depan)",
+            "example": "1990-01-01"
+          },
+          "jenis_kelamin": {
+            "type": "string",
+            "enum": ["laki_laki", "perempuan"],
+            "description": "Jenis kelamin (laki_laki=Laki-laki, perempuan=Perempuan)",
+            "example": "laki_laki"
+          },
+          "agama": {
+            "type": "string",
+            "enum": [
+              "islam",
+              "kristen",
+              "katolik",
+              "hindu",
+              "buddha",
+              "konghucu",
+              "lainnya"
+            ],
+            "description": "Agama",
+            "example": "islam"
+          },
+          "status_perkawinan": {
+            "type": "string",
+            "enum": ["belum_kawin", "kawin", "cerai_hidup", "cerai_mati"],
+            "description": "Status perkawinan",
+            "example": "belum_kawin"
+          },
+          "gol_darah": {
+            "type": "string",
+            "enum": ["a", "b", "ab", "o", "tidak_tahu"],
+            "description": "Golongan darah",
+            "example": "a"
+          },
+          "pekerjaan": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Pekerjaan (maksimal 100 karakter)",
+            "example": "Karyawan Swasta"
+          },
+          "kewarganegaraan": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50,
+            "description": "Kewarganegaraan (maksimal 50 karakter)",
+            "example": "WNI"
+          }
+        }
+      },
+      "SIM": {
+        "type": "object",
+        "properties": {
+          "sim_id": {
+            "type": "string",
+            "description": "ID unik SIM (auto-generated dengan nanoid)",
+            "example": "V1StGXR8_Z5jdHi6B-myT"
+          },
+          "nomor_sim": {
+            "type": "string",
+            "description": "Nomor SIM (16 digit)",
+            "example": "1234567890123456"
+          },
+          "jenis_sim": {
+            "type": "string",
+            "enum": ["a", "b1", "b2", "c", "d"],
+            "description": "Jenis SIM (a=Sepeda Motor, b1=Mobil Pribadi, b2=Mobil Umum, c=Truk, d=Bus)",
+            "example": "b1"
+          },
+          "tanggal_terbit": {
+            "type": "string",
+            "format": "date",
+            "description": "Tanggal terbit SIM",
+            "example": "2024-01-01"
+          },
+          "tanggal_expired": {
+            "type": "string",
+            "format": "date",
+            "description": "Tanggal expired SIM",
+            "example": "2029-01-01"
+          },
+          "ktp_id": {
+            "type": "string",
+            "description": "ID KTP yang terkait",
+            "example": "V1StGXR8_Z5jdHi6B-myT"
+          },
+          "created_by": {
+            "type": "string",
+            "description": "ID user yang membuat SIM",
+            "example": "V1StGXR8_Z5jdHi6B-myT"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Tanggal dibuat",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Tanggal diperbarui",
+            "example": "2024-01-01T00:00:00.000Z"
+          },
+          "creator_name": {
+            "type": "string",
+            "description": "Nama user yang membuat SIM",
+            "example": "John Doe"
+          }
+        }
+      },
+      "CreateSIMRequest": {
+        "type": "object",
+        "required": [
+          "nomor_sim",
+          "jenis_sim",
+          "tanggal_terbit",
+          "tanggal_expired",
+          "ktp_id"
+        ],
+        "properties": {
+          "nomor_sim": {
+            "type": "string",
+            "pattern": "^\\d{16}$",
+            "description": "Nomor SIM (16 digit)",
+            "example": "1234567890123456"
+          },
+          "jenis_sim": {
+            "type": "string",
+            "enum": ["a", "b1", "b2", "c", "d"],
+            "description": "Jenis SIM (a=Sepeda Motor, b1=Mobil Pribadi, b2=Mobil Umum, c=Truk, d=Bus)",
+            "example": "b1"
+          },
+          "tanggal_terbit": {
+            "type": "string",
+            "format": "date",
+            "description": "Tanggal terbit SIM (tidak boleh di masa depan)",
+            "example": "2024-01-01"
+          },
+          "tanggal_expired": {
+            "type": "string",
+            "format": "date",
+            "description": "Tanggal expired SIM (harus di masa depan dan setelah tanggal terbit)",
+            "example": "2029-01-01"
+          },
+          "ktp_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 21,
+            "description": "ID KTP yang terkait",
+            "example": "V1StGXR8_Z5jdHi6B-myT"
+          }
+        }
+      },
+      "UpdateSIMRequest": {
+        "type": "object",
+        "properties": {
+          "nomor_sim": {
+            "type": "string",
+            "pattern": "^\\d{16}$",
+            "description": "Nomor SIM (16 digit)",
+            "example": "1234567890123456"
+          },
+          "jenis_sim": {
+            "type": "string",
+            "enum": ["a", "b1", "b2", "c", "d"],
+            "description": "Jenis SIM (a=Sepeda Motor, b1=Mobil Pribadi, b2=Mobil Umum, c=Truk, d=Bus)",
+            "example": "b1"
+          },
+          "tanggal_terbit": {
+            "type": "string",
+            "format": "date",
+            "description": "Tanggal terbit SIM (tidak boleh di masa depan)",
+            "example": "2024-01-01"
+          },
+          "tanggal_expired": {
+            "type": "string",
+            "format": "date",
+            "description": "Tanggal expired SIM (harus di masa depan dan setelah tanggal terbit)",
+            "example": "2029-01-01"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Masukkan JWT token dengan format: Bearer <token>"
+      }
+    }
+  },
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "summary": "Login user",
+        "description": "Endpoint untuk melakukan autentikasi user. User agent dan IP address akan diambil otomatis dari request headers.",
+        "tags": ["Authentication"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Email pengguna",
+                    "example": "admin@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "Password pengguna",
+                    "example": "password123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login berhasil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "tokens": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "Access token untuk autentikasi",
+                                  "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                },
+                                "refresh_token": {
+                                  "type": "string",
+                                  "description": "Refresh token untuk memperbarui access token",
+                                  "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                }
+                              }
+                            },
+                            "user": {
+                              "$ref": "#/components/schemas/User"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Email atau password kosong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Kredensial salah",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "summary": "Mengambil profil user yang sedang login",
+        "description": "Endpoint untuk mengambil profil user yang sedang login (memerlukan autentikasi)",
+        "tags": ["Authentication"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profil user berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Token tidak valid atau tidak ada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - User tidak ditemukan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "Logout user",
+        "description": "Endpoint untuk melakukan logout user dan menghapus session",
+        "tags": ["Authentication"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logout berhasil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Token tidak valid atau tidak ada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "summary": "Refresh access token",
+        "description": "Endpoint untuk memperbarui access token menggunakan refresh token",
+        "tags": ["Authentication"],
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refresh_token"],
+                "properties": {
+                  "refresh_token": {
+                    "type": "string",
+                    "description": "Refresh token untuk memperbarui access token",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token berhasil diperbarui",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "tokens": {
+                              "type": "object",
+                              "properties": {
+                                "access_token": {
+                                  "type": "string",
+                                  "description": "Access token baru",
+                                  "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                }
+                              }
+                            },
+                            "user": {
+                              "$ref": "#/components/schemas/User"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Refresh token tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Refresh token tidak valid atau expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "post": {
+        "summary": "Membuat user baru",
+        "description": "Endpoint untuk membuat user baru dengan auto-generated user_id menggunakan nanoid",
+        "tags": ["Users"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User berhasil dibuat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Data tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Email sudah digunakan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Mengambil daftar user",
+        "description": "Endpoint untuk mengambil daftar user dengan pagination dan search",
+        "tags": ["Users"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Nomor halaman",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Jumlah data per halaman",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Kata kunci pencarian",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "description": "Field untuk sorting",
+            "schema": {
+              "type": "string",
+              "default": "created_at"
+            }
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "description": "Urutan sorting",
+            "schema": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar user berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/User"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationInfo"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Parameter tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{userId}": {
+      "get": {
+        "summary": "Mengambil detail user",
+        "description": "Endpoint untuk mengambil detail user berdasarkan ID",
+        "tags": ["Users"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "ID user yang akan diambil",
+            "schema": {
+              "type": "string",
+              "example": "V1StGXR8_Z5jdHi6B-myT"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detail user berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - ID tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - User tidak ditemukan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Memperbarui data user",
+        "description": "Endpoint untuk memperbarui data user berdasarkan ID",
+        "tags": ["Users"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "ID user yang akan diperbarui",
+            "schema": {
+              "type": "string",
+              "example": "V1StGXR8_Z5jdHi6B-myT"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Email user baru (opsional)",
+                    "example": "john.doe.new@example.com"
+                  },
+                  "full_name": {
+                    "type": "string",
+                    "description": "Nama lengkap user baru (opsional)",
+                    "example": "John Doe Updated"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "Password user baru (opsional)",
+                    "example": "newpassword123"
+                  },
+                  "is_active": {
+                    "type": "boolean",
+                    "description": "Status aktif user baru (opsional)",
+                    "example": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User berhasil diperbarui",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/User"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Data tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - User tidak ditemukan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Email sudah digunakan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Menghapus user",
+        "description": "Endpoint untuk menghapus user berdasarkan ID",
+        "tags": ["Users"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "ID user yang akan dihapus",
+            "schema": {
+              "type": "string",
+              "example": "V1StGXR8_Z5jdHi6B-myT"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User berhasil dihapus",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - ID tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - User tidak ditemukan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ktp": {
+      "post": {
+        "summary": "Membuat KTP baru",
+        "description": "Endpoint untuk membuat KTP baru dengan auto-generated ktp_id menggunakan nanoid",
+        "tags": ["KTP"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateKTPRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "KTP berhasil dibuat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/KTP"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Data tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Token tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - NIK sudah digunakan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Mengambil daftar KTP",
+        "description": "Endpoint untuk mengambil daftar KTP dengan pagination, search, dan sorting",
+        "tags": ["KTP"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Nomor halaman",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Jumlah data per halaman",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Kata kunci pencarian berdasarkan NIK, alamat, tempat lahir, atau pekerjaan",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "description": "Field untuk sorting",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "nik",
+                "tempat_lahir",
+                "tanggal_lahir",
+                "jenis_kelamin",
+                "agama",
+                "status_perkawinan",
+                "gol_darah",
+                "pekerjaan",
+                "creator_name",
+                "created_at",
+                "updated_at"
+              ],
+              "default": "created_at"
+            }
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "description": "Urutan sorting",
+            "schema": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "desc"
+            }
+          },
+          {
+            "name": "jenis_kelamin",
+            "in": "query",
+            "description": "Filter berdasarkan jenis kelamin",
+            "schema": {
+              "type": "string",
+              "enum": ["laki_laki", "perempuan"]
+            }
+          },
+          {
+            "name": "agama",
+            "in": "query",
+            "description": "Filter berdasarkan agama",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "islam",
+                "kristen",
+                "katolik",
+                "hindu",
+                "buddha",
+                "konghucu",
+                "lainnya"
+              ]
+            }
+          },
+          {
+            "name": "status_perkawinan",
+            "in": "query",
+            "description": "Filter berdasarkan status perkawinan",
+            "schema": {
+              "type": "string",
+              "enum": ["belum_kawin", "kawin", "cerai_hidup", "cerai_mati"]
+            }
+          },
+          {
+            "name": "gol_darah",
+            "in": "query",
+            "description": "Filter berdasarkan golongan darah",
+            "schema": {
+              "type": "string",
+              "enum": ["a", "b", "ab", "o", "tidak_tahu"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar KTP berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/KTP"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationInfo"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Parameter tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Token tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ktp/{ktpId}": {
+      "get": {
+        "summary": "Mengambil detail KTP",
+        "description": "Endpoint untuk mengambil detail KTP berdasarkan ID",
+        "tags": ["KTP"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ktpId",
+            "in": "path",
+            "required": true,
+            "description": "ID KTP yang akan diambil",
+            "schema": {
+              "type": "string",
+              "example": "V1StGXR8_Z5jdHi6B-myT"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detail KTP berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/KTP"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - ID tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Token tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - KTP tidak ditemukan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Memperbarui data KTP",
+        "description": "Endpoint untuk memperbarui data KTP berdasarkan ID",
+        "tags": ["KTP"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ktpId",
+            "in": "path",
+            "required": true,
+            "description": "ID KTP yang akan diperbarui",
+            "schema": {
+              "type": "string",
+              "example": "V1StGXR8_Z5jdHi6B-myT"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateKTPRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "KTP berhasil diperbarui",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/KTP"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Data tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Token tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - KTP tidak ditemukan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - NIK sudah digunakan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Menghapus KTP",
+        "description": "Endpoint untuk menghapus KTP berdasarkan ID",
+        "tags": ["KTP"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ktpId",
+            "in": "path",
+            "required": true,
+            "description": "ID KTP yang akan dihapus",
+            "schema": {
+              "type": "string",
+              "example": "V1StGXR8_Z5jdHi6B-myT"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "KTP berhasil dihapus",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - ID tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Token tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - KTP tidak ditemukan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sim": {
+      "post": {
+        "summary": "Membuat SIM baru",
+        "description": "Endpoint untuk membuat SIM baru dengan auto-generated sim_id menggunakan nanoid",
+        "tags": ["SIM"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSIMRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "SIM berhasil dibuat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/SIM"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Data tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Token tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Nomor SIM sudah digunakan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Mengambil daftar SIM",
+        "description": "Endpoint untuk mengambil daftar SIM dengan pagination, search, dan sorting",
+        "tags": ["SIM"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Nomor halaman",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Jumlah data per halaman",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Kata kunci pencarian berdasarkan nomor SIM atau jenis SIM",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "description": "Field untuk sorting",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "nomor_sim",
+                "jenis_sim",
+                "tanggal_terbit",
+                "tanggal_expired",
+                "creator_name",
+                "created_at",
+                "updated_at"
+              ],
+              "default": "created_at"
+            }
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "description": "Urutan sorting",
+            "schema": {
+              "type": "string",
+              "enum": ["asc", "desc"],
+              "default": "desc"
+            }
+          },
+          {
+            "name": "jenis_sim",
+            "in": "query",
+            "description": "Filter berdasarkan jenis SIM",
+            "schema": {
+              "type": "string",
+              "enum": ["a", "b1", "b2", "c", "d"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Daftar SIM berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/SIM"
+                          }
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/PaginationInfo"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Parameter tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Token tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sim/{simId}": {
+      "get": {
+        "summary": "Mengambil detail SIM",
+        "description": "Endpoint untuk mengambil detail SIM berdasarkan ID",
+        "tags": ["SIM"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "simId",
+            "in": "path",
+            "required": true,
+            "description": "ID SIM yang akan diambil",
+            "schema": {
+              "type": "string",
+              "example": "V1StGXR8_Z5jdHi6B-myT"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detail SIM berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/SIM"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - ID tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Token tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - SIM tidak ditemukan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Memperbarui data SIM",
+        "description": "Endpoint untuk memperbarui data SIM berdasarkan ID",
+        "tags": ["SIM"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "simId",
+            "in": "path",
+            "required": true,
+            "description": "ID SIM yang akan diperbarui",
+            "schema": {
+              "type": "string",
+              "example": "V1StGXR8_Z5jdHi6B-myT"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSIMRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SIM berhasil diperbarui",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/SIM"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - Data tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Token tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - SIM tidak ditemukan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - Nomor SIM sudah digunakan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Menghapus SIM",
+        "description": "Endpoint untuk menghapus SIM berdasarkan ID",
+        "tags": ["SIM"],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "simId",
+            "in": "path",
+            "required": true,
+            "description": "ID SIM yang akan dihapus",
+            "schema": {
+              "type": "string",
+              "example": "V1StGXR8_Z5jdHi6B-myT"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SIM berhasil dihapus",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - ID tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Token tidak valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found - SIM tidak ditemukan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "Endpoints untuk autentikasi"
+    },
+    {
+      "name": "Users",
+      "description": "Endpoints untuk operasi CRUD user"
+    },
+    {
+      "name": "KTP",
+      "description": "Endpoints untuk operasi CRUD KTP (Kartu Tanda Penduduk)"
+    },
+    {
+      "name": "SIM",
+      "description": "Endpoints untuk operasi CRUD SIM (Surat Izin Mengemudi)"
+    }
+  ]
+}

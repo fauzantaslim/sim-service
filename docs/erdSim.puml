@@ -1,0 +1,69 @@
+@startuml
+
+  entity User {
+    * user_id : char(21) <<PK>>
+    --
+    * email : varchar(255) <<unique>>
+    * full_name: varchar(255) 
+    * password : varchar(255)
+    * is_active : boolean
+    --
+    * created_at : timestamp
+    updated_at : timestamp
+  }
+
+  entity Session {
+    * session_id : int <<PK>> <<autoincrement>>
+    --
+    * refresh_token : text
+    * expires_at : datetime
+    user_agent : varchar(255)
+    ip_address : varchar(25)
+    --
+    * user_id : char(21) <<FK>>
+    --
+    * created_at : timestamp
+    updated_at : timestamp
+    revoked_at : timestamp
+  }
+
+ entity KTP {
+    * ktp_id : char(21) <<PK>>
+    --
+    * nik : char(16) <<unique>>
+    * alamat : text
+    * tempat_lahir : varchar(100)
+    * tanggal_lahir : date
+    * jenis_kelamin : enum("laki_laki","perempuan")
+    * agama : enum("islam","kristen","katolik","hindu","buddha","konghucu","lainnya")
+    * status_perkawinan : enum("belum_kawin","kawin","cerai_hidup","cerai_mati")
+    * gol_darah : enum("a","b","ab","o","tidak_tahu")
+    * pekerjaan : varchar(100)
+    * kewarganegaraan : varchar(50)
+    --
+    * created_by : char(21) <<FK>>
+    --
+    * created_at : timestamp
+    updated_at : timestamp
+  }
+
+    entity SIM {
+    * sim_id : char(21) <<PK>>
+    --
+    * nomor_sim : char(16) <<unique>>
+    * jenis_sim : enum("a","b1","b2","c","d")
+    * tanggal_terbit : date
+    * tanggal_expired : date
+    --
+    * ktp_id : char(16) <<FK>>
+    * created_by : char(21) <<FK>>
+    --
+    * created_at : timestamp
+    updated_at : timestamp
+  }
+
+  User ||--o{ Session : "has_sessions"
+  User ||--o{ KTP : "creates"
+  User ||--o{ SIM : "creates"
+  KTP  ||--o{ SIM : "owns"
+@enduml
