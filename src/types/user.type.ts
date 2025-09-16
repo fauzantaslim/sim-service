@@ -84,6 +84,6 @@ export function toUserResponse(user: User): UserResponse {
     user_id: user.user_id,
     email: user.email,
     full_name: user.full_name,
-    is_active: user.is_active
+    is_active: Boolean(user.is_active)
   };
 }

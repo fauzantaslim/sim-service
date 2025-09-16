@@ -1,16 +1,17 @@
 import type { Knex } from 'knex';
 import bcrypt from 'bcrypt';
 import { nanoid } from 'nanoid';
+import { fakerID_ID as faker } from '@faker-js/faker';
 
 export async function seed(knex: Knex): Promise<void> {
-  // Hapus data yang ada
+  // Hapus data lama
   await knex('users').del();
 
-  // Hash password untuk admin
+  // Hash password default
   const hashedPassword = await bcrypt.hash('password', 10);
 
-  // Insert seed data
-  await knex('users').insert([
+  // User default
+  const users = [
     {
       user_id: nanoid(21),
       email: 'admin@sim.com',
@@ -25,5 +26,18 @@ export async function seed(knex: Knex): Promise<void> {
       password: hashedPassword,
       is_active: true
     }
-  ]);
+  ];
+
+  // Tambahkan 10 user dummy lokal Indonesia
+  for (let i = 0; i < 10; i++) {
+    users.push({
+      user_id: nanoid(21),
+      email: faker.internet.email(),
+      full_name: faker.person.fullName(),
+      password: hashedPassword, // semua pakai "password"
+      is_active: faker.datatype.boolean()
+    });
+  }
+
+  await knex('users').insert(users);
 }
