@@ -53,9 +53,9 @@ export class UserRepository {
     // Filter search jika ada
     if (search) {
       query = query.where(function () {
-        this.where('email', 'ilike', `%${search}%`).orWhere(
+        this.where('email', 'like', `%${search}%`).orWhere(
           'full_name',
-          'ilike',
+          'like',
           `%${search}%`
         );
       });
@@ -71,9 +71,9 @@ export class UserRepository {
     let countQuery = db(this.tableName);
     if (search) {
       countQuery = countQuery.where(function () {
-        this.where('email', 'ilike', `%${search}%`).orWhere(
+        this.where('email', 'like', `%${search}%`).orWhere(
           'full_name',
-          'ilike',
+          'like',
           `%${search}%`
         );
       });

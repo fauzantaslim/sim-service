@@ -106,18 +106,18 @@ export class SIMRepository {
     // Filter search jika ada
     if (search) {
       query = query.where(function () {
-        this.where('sim.nomor_sim', 'ilike', `%${search}%`)
-          .orWhere('sim.nik', 'ilike', `%${search}%`)
-          .orWhere('sim.full_name', 'ilike', `%${search}%`)
-          .orWhere('sim.kecamatan', 'ilike', `%${search}%`)
-          .orWhere('sim.kabupaten', 'ilike', `%${search}%`)
-          .orWhere('sim.provinsi', 'ilike', `%${search}%`)
-          .orWhere('sim.jenis_sim', 'ilike', `%${search}%`)
-          .orWhere('sim.jenis_kelamin', 'ilike', `%${search}%`)
-          .orWhere('sim.gol_darah', 'ilike', `%${search}%`)
-          .orWhere('sim.tempat_lahir', 'ilike', `%${search}%`)
-          .orWhere('sim.pekerjaan', 'ilike', `%${search}%`)
-          .orWhere('users.full_name', 'ilike', `%${search}%`);
+        this.where('sim.nomor_sim', 'like', `%${search}%`)
+          .orWhere('sim.nik', 'like', `%${search}%`)
+          .orWhere('sim.full_name', 'like', `%${search}%`)
+          .orWhere('sim.kecamatan', 'like', `%${search}%`)
+          .orWhere('sim.kabupaten', 'like', `%${search}%`)
+          .orWhere('sim.provinsi', 'like', `%${search}%`)
+          .orWhere('sim.jenis_sim', 'like', `%${search}%`)
+          .orWhere('sim.jenis_kelamin', 'like', `%${search}%`)
+          .orWhere('sim.gol_darah', 'like', `%${search}%`)
+          .orWhere('sim.tempat_lahir', 'like', `%${search}%`)
+          .orWhere('sim.pekerjaan', 'like', `%${search}%`)
+          .orWhere('users.full_name', 'like', `%${search}%`);
       });
     }
 
@@ -140,18 +140,18 @@ export class SIMRepository {
     );
     if (search) {
       countQuery = countQuery.where(function () {
-        this.where('sim.nomor_sim', 'ilike', `%${search}%`)
-          .orWhere('sim.nik', 'ilike', `%${search}%`)
-          .orWhere('sim.full_name', 'ilike', `%${search}%`)
-          .orWhere('sim.kecamatan', 'ilike', `%${search}%`)
-          .orWhere('sim.kabupaten', 'ilike', `%${search}%`)
-          .orWhere('sim.provinsi', 'ilike', `%${search}%`)
-          .orWhere('sim.jenis_sim', 'ilike', `%${search}%`)
-          .orWhere('sim.jenis_kelamin', 'ilike', `%${search}%`)
-          .orWhere('sim.gol_darah', 'ilike', `%${search}%`)
-          .orWhere('sim.tempat_lahir', 'ilike', `%${search}%`)
-          .orWhere('sim.pekerjaan', 'ilike', `%${search}%`)
-          .orWhere('users.full_name', 'ilike', `%${search}%`);
+        this.where('sim.nomor_sim', 'like', `%${search}%`)
+          .orWhere('sim.nik', 'like', `%${search}%`)
+          .orWhere('sim.full_name', 'like', `%${search}%`)
+          .orWhere('sim.kecamatan', 'like', `%${search}%`)
+          .orWhere('sim.kabupaten', 'like', `%${search}%`)
+          .orWhere('sim.provinsi', 'like', `%${search}%`)
+          .orWhere('sim.jenis_sim', 'like', `%${search}%`)
+          .orWhere('sim.jenis_kelamin', 'like', `%${search}%`)
+          .orWhere('sim.gol_darah', 'like', `%${search}%`)
+          .orWhere('sim.tempat_lahir', 'like', `%${search}%`)
+          .orWhere('sim.pekerjaan', 'like', `%${search}%`)
+          .orWhere('users.full_name', 'like', `%${search}%`);
       });
     }
 
