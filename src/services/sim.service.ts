@@ -47,13 +47,33 @@ export class SIMService {
       );
     }
 
+    // Validasi nik sudah ada
+    const nikExists = await this.simRepository.isNikExists(validatedData.nik);
+    if (nikExists) {
+      throw new ResponseError(
+        StatusCodes.CONFLICT,
+        'NIK sudah digunakan oleh SIM lain'
+      );
+    }
+
     // Buat SIM data untuk database
     const simToCreate: Omit<SIM, 'sim_id' | 'created_at' | 'updated_at'> = {
       nomor_sim: validatedData.nomor_sim,
+      full_name: validatedData.full_name,
+      nik: validatedData.nik,
+      rt: validatedData.rt,
+      rw: validatedData.rw,
+      kecamatan: validatedData.kecamatan,
+      kabupaten: validatedData.kabupaten,
+      provinsi: validatedData.provinsi,
       jenis_sim: validatedData.jenis_sim as JenisSIM,
-      tanggal_terbit: validatedData.tanggal_terbit,
       tanggal_expired: validatedData.tanggal_expired,
-      ktp_id: validatedData.ktp_id,
+      jenis_kelamin: validatedData.jenis_kelamin,
+      gol_darah: validatedData.gol_darah,
+      tempat_lahir: validatedData.tempat_lahir,
+      tanggal_lahir: validatedData.tanggal_lahir,
+      pekerjaan: validatedData.pekerjaan,
+      picture_path: validatedData.picture_path,
       created_by: createdBy
     };
 
@@ -126,6 +146,20 @@ export class SIMService {
         throw new ResponseError(
           StatusCodes.CONFLICT,
           'Nomor SIM sudah digunakan oleh SIM lain'
+        );
+      }
+    }
+
+    // Validasi nik jika diupdate
+    if (validatedData.nik && validatedData.nik !== existingSIM.nik) {
+      const nikExists = await this.simRepository.isNikExists(
+        validatedData.nik,
+        validatedData.sim_id
+      );
+      if (nikExists) {
+        throw new ResponseError(
+          StatusCodes.CONFLICT,
+          'NIK sudah digunakan oleh SIM lain'
         );
       }
     }

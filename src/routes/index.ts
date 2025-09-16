@@ -3,7 +3,6 @@ import { deserializeToken } from '../middlewares/auth.middleware';
 import { AuthController } from '../controllers/auth.controller';
 
 import userRoutes from './user.routes';
-import ktpRoutes from './ktp.routes';
 import simRoutes from './sim.routes';
 
 export const registerRoutes = (app: Application): void => {
@@ -22,7 +21,6 @@ export const registerRoutes = (app: Application): void => {
   privateRouter.post('/auth/logout', authController.logout);
   privateRouter.get('/auth/me', authController.me);
   privateRouter.use('/users', userRoutes);
-  privateRouter.use('/ktp', ktpRoutes);
   privateRouter.use('/sim', simRoutes);
 
   app.use('/api', publicRouter);

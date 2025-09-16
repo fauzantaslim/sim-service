@@ -47,15 +47,26 @@
     updated_at : timestamp
   }
 
-    entity SIM {
+  entity SIM {
     * sim_id : char(21) <<PK>>
     --
     * nomor_sim : char(16) <<unique>>
-    * jenis_sim : enum("a","b1","b2","c","d")
-    * tanggal_terbit : date
+    * full_name : varchar(255)
+    * rt : varchar(3)
+    * rw : varchar(3)
+    * kecamatan : varchar(255)
+    * kabupaten : varchar(255)
+    * provinsi : varchar(255)
+    * nik : char(16) <<unique>>
+    * jenis_sim : enum("a","b1","b2","c","c1","c2","d")
     * tanggal_expired : date
+    * jenis_kelamin : varchar(20)
+    * gol_darah : varchar(10)
+    * tempat_lahir : varchar(100)
+    * tanggal_lahir : date
+    * pekerjaan : varchar(255)
+    * picture_path : varchar(255)
     --
-    * ktp_id : char(16) <<FK>>
     * created_by : char(21) <<FK>>
     --
     * created_at : timestamp
@@ -65,5 +76,4 @@
   User ||--o{ Session : "has_sessions"
   User ||--o{ KTP : "creates"
   User ||--o{ SIM : "creates"
-  KTP  ||--o{ SIM : "owns"
 @enduml

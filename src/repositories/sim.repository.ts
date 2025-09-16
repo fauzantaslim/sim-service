@@ -24,9 +24,20 @@ export class SIMRepository {
   ) {
     const allowedSortFields = new Set([
       'nomor_sim',
+      'full_name',
+      'nik',
+      'rt',
+      'rw',
+      'kecamatan',
+      'kabupaten',
+      'provinsi',
       'jenis_sim',
-      'tanggal_terbit',
       'tanggal_expired',
+      'jenis_kelamin',
+      'gol_darah',
+      'tempat_lahir',
+      'tanggal_lahir',
+      'pekerjaan',
       'created_at',
       'updated_at'
     ]);
@@ -96,7 +107,16 @@ export class SIMRepository {
     if (search) {
       query = query.where(function () {
         this.where('sim.nomor_sim', 'ilike', `%${search}%`)
+          .orWhere('sim.nik', 'ilike', `%${search}%`)
+          .orWhere('sim.full_name', 'ilike', `%${search}%`)
+          .orWhere('sim.kecamatan', 'ilike', `%${search}%`)
+          .orWhere('sim.kabupaten', 'ilike', `%${search}%`)
+          .orWhere('sim.provinsi', 'ilike', `%${search}%`)
           .orWhere('sim.jenis_sim', 'ilike', `%${search}%`)
+          .orWhere('sim.jenis_kelamin', 'ilike', `%${search}%`)
+          .orWhere('sim.gol_darah', 'ilike', `%${search}%`)
+          .orWhere('sim.tempat_lahir', 'ilike', `%${search}%`)
+          .orWhere('sim.pekerjaan', 'ilike', `%${search}%`)
           .orWhere('users.full_name', 'ilike', `%${search}%`);
       });
     }
@@ -121,7 +141,16 @@ export class SIMRepository {
     if (search) {
       countQuery = countQuery.where(function () {
         this.where('sim.nomor_sim', 'ilike', `%${search}%`)
+          .orWhere('sim.nik', 'ilike', `%${search}%`)
+          .orWhere('sim.full_name', 'ilike', `%${search}%`)
+          .orWhere('sim.kecamatan', 'ilike', `%${search}%`)
+          .orWhere('sim.kabupaten', 'ilike', `%${search}%`)
+          .orWhere('sim.provinsi', 'ilike', `%${search}%`)
           .orWhere('sim.jenis_sim', 'ilike', `%${search}%`)
+          .orWhere('sim.jenis_kelamin', 'ilike', `%${search}%`)
+          .orWhere('sim.gol_darah', 'ilike', `%${search}%`)
+          .orWhere('sim.tempat_lahir', 'ilike', `%${search}%`)
+          .orWhere('sim.pekerjaan', 'ilike', `%${search}%`)
           .orWhere('users.full_name', 'ilike', `%${search}%`);
       });
     }
@@ -206,6 +235,20 @@ export class SIMRepository {
     excludeSimId?: string
   ): Promise<boolean> {
     let query = db(this.tableName).where('nomor_sim', nomorSim);
+
+    if (excludeSimId) {
+      query = query.whereNot('sim_id', excludeSimId);
+    }
+
+    const sim = await query.first();
+    return !!sim;
+  }
+
+  /**
+   * Mengecek apakah NIK sudah digunakan di tabel sim.
+   */
+  async isNikExists(nik: string, excludeSimId?: string): Promise<boolean> {
+    let query = db(this.tableName).where('nik', nik);
 
     if (excludeSimId) {
       query = query.whereNot('sim_id', excludeSimId);

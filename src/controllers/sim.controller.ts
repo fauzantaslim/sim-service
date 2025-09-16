@@ -27,9 +27,20 @@ export class SIMController {
   private validateSortField(sortBy: string): string {
     const allowedSortFields = new Set([
       'nomor_sim',
+      'full_name',
+      'nik',
+      'rt',
+      'rw',
+      'kecamatan',
+      'kabupaten',
+      'provinsi',
       'jenis_sim',
-      'tanggal_terbit',
       'tanggal_expired',
+      'jenis_kelamin',
+      'gol_darah',
+      'tempat_lahir',
+      'tanggal_lahir',
+      'pekerjaan',
       'creator_name',
       'created_at',
       'updated_at'
@@ -51,6 +62,7 @@ export class SIMController {
         );
       }
 
+      // Semua field baru sudah didukung di CreateSIMRequest
       const request: CreateSIMRequest = req.body as CreateSIMRequest;
       const newSIM = await this.simService.createSIM(
         request,
@@ -130,6 +142,7 @@ export class SIMController {
    */
   updateSIM = async (req: UserRequest, res: Response, next: NextFunction) => {
     try {
+      // Semua field baru sudah didukung di UpdateSIMRequest
       const request: UpdateSIMRequest = {
         ...req.body,
         sim_id: req.params.simId
