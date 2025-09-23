@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Response, NextFunction, Request } from 'express';
 import { AuthService } from '../services/auth.service';
 import { UserRequest } from '../types/request.type';
 import { LoginRequest } from '../types/user.type';
@@ -15,6 +15,25 @@ export class AuthController {
   }
 
   /**
+   * Mengambil CSRF token untuk keamanan.
+   * GET /auth/csrf-token
+   */
+  getCsrfToken = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.authService.generateCsrfToken(req, res);
+
+      res.status(StatusCodes.OK).json({
+        success: true,
+        status_code: StatusCodes.OK,
+        message: 'CSRF token berhasil dibuat',
+        data: result
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
    * Melakukan login user.
    * POST /auth/login
    */
@@ -29,7 +48,8 @@ export class AuthController {
       const result = await this.authService.login(
         request,
         user_agent,
-        ip_address
+        ip_address,
+        res
       );
 
       res.status(StatusCodes.OK).json({
@@ -70,7 +90,7 @@ export class AuthController {
   };
 
   /**
-   * Refresh access token menggunakan refresh token.
+   * Refresh access token menggunakan refresh token dari cookie.
    * POST /auth/refresh
    */
   refreshToken = async (
@@ -79,13 +99,16 @@ export class AuthController {
     next: NextFunction
   ) => {
     try {
-      const { refresh_token } = req.body;
+      const { cookies } = req as Request & {
+        cookies?: Record<string, string>;
+      };
+      const refresh_token = cookies?.refresh_token as string | undefined;
 
       if (!refresh_token) {
         return res.status(StatusCodes.BAD_REQUEST).json({
           success: false,
           status_code: StatusCodes.BAD_REQUEST,
-          message: 'Refresh token harus diisi',
+          message: 'Refresh token tidak ditemukan',
           data: null
         });
       }

@@ -57,7 +57,7 @@
           "password": {
             "type": "string",
             "description": "Password user (minimal 8 karakter, maksimal 255 karakter)",
-            "example": "password123"
+            "example": "password"
           },
           "is_active": {
             "type": "boolean",
@@ -516,6 +516,16 @@
             "example": "/uploads/sim/123.jpg"
           }
         }
+      },
+      "CsrfTokenResponse": {
+        "type": "object",
+        "properties": {
+          "csrf_token": {
+            "type": "string",
+            "description": "CSRF token untuk keamanan",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        }
       }
     },
     "securitySchemes": {
@@ -533,10 +543,42 @@
     }
   ],
   "paths": {
+    "/api/auth/csrf-token": {
+      "get": {
+        "summary": "Mendapatkan CSRF token",
+        "description": "Endpoint untuk mendapatkan CSRF token yang diperlukan untuk keamanan. Token akan otomatis disimpan di HTTP-only cookie dan disertakan dalam semua request POST, PUT, DELETE.",
+        "tags": ["Authentication"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "CSRF token berhasil dibuat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/SuccessResponse"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "$ref": "#/components/schemas/CsrfTokenResponse"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/login": {
       "post": {
         "summary": "Login user",
-        "description": "Endpoint untuk melakukan autentikasi user. User agent dan IP address akan diambil otomatis dari request headers.",
+        "description": "Endpoint untuk melakukan autentikasi user. User agent dan IP address akan diambil otomatis dari request headers. Refresh token akan disimpan di HTTP-only cookie untuk keamanan.",
         "tags": ["Authentication"],
         "security": [],
         "requestBody": {
@@ -556,7 +598,7 @@
                   "password": {
                     "type": "string",
                     "description": "Password pengguna",
-                    "example": "password123"
+                    "example": "password"
                   }
                 }
               }
@@ -722,27 +764,21 @@
     "/api/auth/refresh": {
       "post": {
         "summary": "Refresh access token",
-        "description": "Endpoint untuk memperbarui access token menggunakan refresh token",
+        "description": "Endpoint untuk memperbarui access token menggunakan refresh token dari HTTP-only cookie. Refresh token akan otomatis diambil dari cookie 'refresh_token' yang diset saat login.",
         "tags": ["Authentication"],
         "security": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["refresh_token"],
-                "properties": {
-                  "refresh_token": {
-                    "type": "string",
-                    "description": "Refresh token untuk memperbarui access token",
-                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                  }
-                }
-              }
+        "parameters": [
+          {
+            "name": "refresh_token",
+            "in": "cookie",
+            "required": true,
+            "description": "Refresh token dari HTTP-only cookie yang diset saat login",
+            "schema": {
+              "type": "string",
+              "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
             }
           }
-        },
+        ],
         "responses": {
           "200": {
             "description": "Token berhasil diperbarui",
@@ -782,7 +818,7 @@
             }
           },
           "400": {
-            "description": "Bad Request - Refresh token tidak valid",
+            "description": "Bad Request - Refresh token tidak ditemukan di cookie",
             "content": {
               "application/json": {
                 "schema": {

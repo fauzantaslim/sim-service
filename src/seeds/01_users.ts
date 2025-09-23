@@ -14,15 +14,8 @@ export async function seed(knex: Knex): Promise<void> {
   const users = [
     {
       user_id: nanoid(21),
-      email: 'admin@sim.com',
+      email: 'admin@example.com',
       full_name: 'Administrator',
-      password: hashedPassword,
-      is_active: true
-    },
-    {
-      user_id: nanoid(21),
-      email: 'user1@sim.com',
-      full_name: 'User Satu',
       password: hashedPassword,
       is_active: true
     }

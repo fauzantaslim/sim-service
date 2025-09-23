@@ -1,0 +1,471 @@
+{
+  "info": {
+    "name": "SIM Service API",
+    "description": "API untuk Sistem Informasi Manajemen dengan fitur CRUD User, KTP (Kartu Tanda Penduduk), dan SIM (Surat Izin Mengemudi). Mendukung autentikasi JWT, pagination, search, dan sorting.",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8026",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "csrfToken",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "description": "Endpoints untuk autentikasi",
+      "item": [
+        {
+          "name": "Get CSRF Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.csrf_token) {",
+                  "        pm.collectionVariables.set('csrfToken', response.data.csrf_token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/csrf-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "csrf-token"]
+            },
+            "description": "Endpoint untuk mendapatkan CSRF token yang diperlukan untuk keamanan. Token akan otomatis disimpan di HTTP-only cookie dan disertakan dalam semua request POST, PUT, DELETE."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.tokens) {",
+                  "        pm.collectionVariables.set('accessToken', response.data.tokens.access_token);",
+                  "        pm.collectionVariables.set('refreshToken', response.data.tokens.refresh_token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Endpoint untuk melakukan autentikasi user. User agent dan IP address akan diambil otomatis dari request headers. Refresh token akan disimpan di HTTP-only cookie untuk keamanan."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Profile (Me)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Endpoint untuk mengambil profil user yang sedang login (memerlukan autentikasi)"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Endpoint untuk melakukan logout user dan menghapus session"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.tokens) {",
+                  "        pm.collectionVariables.set('accessToken', response.data.tokens.access_token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Endpoint untuk memperbarui access token menggunakan refresh token dari HTTP-only cookie. Refresh token akan otomatis diambil dari cookie 'refresh_token' yang diset saat login. Tidak memerlukan request body."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "Endpoints untuk operasi CRUD user",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"full_name\": \"John Doe\",\n  \"password\": \"password123\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            },
+            "description": "Endpoint untuk membuat user baru dengan auto-generated user_id menggunakan nanoid"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users?page=1&limit=10&search=&sort_by=created_at&sort_order=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Nomor halaman"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Jumlah data per halaman"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Kata kunci pencarian"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "created_at",
+                  "description": "Field untuk sorting"
+                },
+                {
+                  "key": "sort_order",
+                  "value": "desc",
+                  "description": "Urutan sorting"
+                }
+              ]
+            },
+            "description": "Endpoint untuk mengambil daftar user dengan pagination dan search"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/V1StGXR8_Z5jdHi6B-myT",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "V1StGXR8_Z5jdHi6B-myT"]
+            },
+            "description": "Endpoint untuk mengambil detail user berdasarkan ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe.new@example.com\",\n  \"full_name\": \"John Doe Updated\",\n  \"password\": \"newpassword123\",\n  \"is_active\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/V1StGXR8_Z5jdHi6B-myT",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "V1StGXR8_Z5jdHi6B-myT"]
+            },
+            "description": "Endpoint untuk memperbarui data user berdasarkan ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/V1StGXR8_Z5jdHi6B-myT",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "V1StGXR8_Z5jdHi6B-myT"]
+            },
+            "description": "Endpoint untuk menghapus user berdasarkan ID"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "SIM",
+      "description": "Endpoints untuk operasi CRUD SIM (Surat Izin Mengemudi)",
+      "item": [
+        {
+          "name": "Create SIM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomor_sim\": \"1234567890123456\",\n  \"full_name\": \"Budi Santoso\",\n  \"nik\": \"3201010101010001\",\n  \"rt\": \"001\",\n  \"rw\": \"002\",\n  \"kecamatan\": \"Cicendo\",\n  \"kabupaten\": \"Bandung\",\n  \"provinsi\": \"Jawa Barat\",\n  \"jenis_sim\": \"c\",\n  \"tanggal_expired\": \"2029-01-01\",\n  \"jenis_kelamin\": \"laki_laki\",\n  \"gol_darah\": \"o\",\n  \"tempat_lahir\": \"Bandung\",\n  \"tanggal_lahir\": \"1990-01-01\",\n  \"pekerjaan\": \"Karyawan Swasta\",\n  \"picture_path\": \"/uploads/sim/123.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sim",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sim"]
+            },
+            "description": "Endpoint untuk membuat SIM baru dengan auto-generated sim_id menggunakan nanoid"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All SIM",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sim?page=1&limit=10&search=&sort_by=created_at&sort_order=desc&jenis_sim=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sim"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Nomor halaman"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Jumlah data per halaman"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Kata kunci pencarian berdasarkan nomor SIM atau jenis SIM"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "created_at",
+                  "description": "Field untuk sorting"
+                },
+                {
+                  "key": "sort_order",
+                  "value": "desc",
+                  "description": "Urutan sorting"
+                },
+                {
+                  "key": "jenis_sim",
+                  "value": "",
+                  "description": "Filter berdasarkan jenis SIM"
+                }
+              ]
+            },
+            "description": "Endpoint untuk mengambil daftar SIM dengan pagination, search, dan sorting"
+          },
+          "response": []
+        },
+        {
+          "name": "Get SIM by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sim/V1StGXR8_Z5jdHi6B-myT",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sim", "V1StGXR8_Z5jdHi6B-myT"]
+            },
+            "description": "Endpoint untuk mengambil detail SIM berdasarkan ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Update SIM",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomor_sim\": \"1234567890123456\",\n  \"full_name\": \"Budi Santoso Updated\",\n  \"nik\": \"3201010101010001\",\n  \"rt\": \"001\",\n  \"rw\": \"002\",\n  \"kecamatan\": \"Cicendo\",\n  \"kabupaten\": \"Bandung\",\n  \"provinsi\": \"Jawa Barat\",\n  \"jenis_sim\": \"c\",\n  \"tanggal_expired\": \"2029-01-01\",\n  \"jenis_kelamin\": \"laki_laki\",\n  \"gol_darah\": \"o\",\n  \"tempat_lahir\": \"Bandung\",\n  \"tanggal_lahir\": \"1990-01-01\",\n  \"pekerjaan\": \"Karyawan Swasta\",\n  \"picture_path\": \"/uploads/sim/123.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sim/V1StGXR8_Z5jdHi6B-myT",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sim", "V1StGXR8_Z5jdHi6B-myT"]
+            },
+            "description": "Endpoint untuk memperbarui data SIM berdasarkan ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete SIM",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sim/V1StGXR8_Z5jdHi6B-myT",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sim", "V1StGXR8_Z5jdHi6B-myT"]
+            },
+            "description": "Endpoint untuk menghapus SIM berdasarkan ID"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

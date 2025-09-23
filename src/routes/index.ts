@@ -11,6 +11,7 @@ export const registerRoutes = (app: Application): void => {
   const authController = new AuthController();
 
   // Public routes
+  publicRouter.get('/auth/csrf-token', authController.getCsrfToken);
   publicRouter.post('/auth/login', authController.login);
   publicRouter.post('/auth/refresh', authController.refreshToken);
 

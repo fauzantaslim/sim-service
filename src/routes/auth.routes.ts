@@ -7,7 +7,9 @@ const authController = new AuthController();
 /**
  * PUBLIC ROUTES - Tidak memerlukan autentikasi
  */
+router.get('/csrf-token', authController.getCsrfToken);
 router.post('/login', authController.login);
+router.post('/refresh', authController.refreshToken);
 
 /**
  * PRIVATE ROUTES - Memerlukan autentikasi

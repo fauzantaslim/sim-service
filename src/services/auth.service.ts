@@ -1,3 +1,4 @@
+import { Request, Response } from 'express';
 import { AuthRepository } from '../repositories/auth.repository';
 import { SessionRepository } from '../repositories/session.repository';
 import {
@@ -26,12 +27,32 @@ export class AuthService {
   }
 
   /**
+   * Generate CSRF token untuk keamanan.
+   */
+  async generateCsrfToken(
+    req: Request,
+    res: Response
+  ): Promise<{ csrf_token: string }> {
+    // Generate CSRF token menggunakan utility dari app.locals
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const generateCsrfToken = (req.app as any).locals.generateToken;
+
+    // Generate token dan set cookie
+    const csrfToken = generateCsrfToken(req, res);
+
+    return {
+      csrf_token: csrfToken
+    };
+  }
+
+  /**
    * Melakukan login user.
    */
   async login(
     request: LoginRequest,
     user_agent?: string,
-    ip_address?: string
+    ip_address?: string,
+    res?: Response
   ): Promise<LoginResponse> {
     const { email, password } = request;
 
@@ -93,6 +114,17 @@ export class AuthService {
 
     // Update last login
     await this.authRepository.updateLastLogin(user.user_id);
+
+    // Set refresh token cookie jika response object tersedia
+    if (res) {
+      res.cookie('refresh_token', refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 hari dalam milliseconds
+        path: '/'
+      });
+    }
 
     // Return response
     const userResponse: UserResponse = toUserResponse(user);
