@@ -57,11 +57,7 @@ const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
 // Apply CSRF protection to all routes except auth endpoints
 app.use((req, res, next) => {
   // Skip CSRF for auth endpoints that don't need it
-  if (
-    req.path === '/api/auth/login' ||
-    req.path === '/api/auth/refresh' ||
-    req.path === '/api/auth/csrf-token'
-  ) {
+  if (req.path === '/api/auth/login' || req.path === '/api/auth/refresh') {
     return next();
   }
   return doubleCsrfProtection(req, res, next);

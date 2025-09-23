@@ -52,6 +52,7 @@ export type LoginResponse = {
   tokens: {
     access_token: string;
     refresh_token: string;
+    csrf_token: string;
   };
   user: UserResponse;
 };

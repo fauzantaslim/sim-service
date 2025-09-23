@@ -43,36 +43,6 @@
       "description": "Endpoints untuk autentikasi",
       "item": [
         {
-          "name": "Get CSRF Token",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    const response = pm.response.json();",
-                  "    if (response.data && response.data.csrf_token) {",
-                  "        pm.collectionVariables.set('csrfToken', response.data.csrf_token);",
-                  "    }",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/csrf-token",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "csrf-token"]
-            },
-            "description": "Endpoint untuk mendapatkan CSRF token yang diperlukan untuk keamanan. Token akan otomatis disimpan di HTTP-only cookie dan disertakan dalam semua request POST, PUT, DELETE."
-          },
-          "response": []
-        },
-        {
           "name": "Login",
           "event": [
             {
@@ -84,6 +54,7 @@
                   "    if (response.data && response.data.tokens) {",
                   "        pm.collectionVariables.set('accessToken', response.data.tokens.access_token);",
                   "        pm.collectionVariables.set('refreshToken', response.data.tokens.refresh_token);",
+                  "        pm.collectionVariables.set('csrfToken', response.data.tokens.csrf_token);",
                   "    }",
                   "}"
                 ],
@@ -111,7 +82,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "login"]
             },
-            "description": "Endpoint untuk melakukan autentikasi user. User agent dan IP address akan diambil otomatis dari request headers. Refresh token akan disimpan di HTTP-only cookie untuk keamanan."
+            "description": "Endpoint untuk melakukan autentikasi user. User agent dan IP address akan diambil otomatis dari request headers. Refresh token akan disimpan di HTTP-only cookie untuk keamanan. CSRF token akan digenerate bersamaan dan dikembalikan dalam response."
           },
           "response": []
         },

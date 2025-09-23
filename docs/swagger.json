@@ -516,16 +516,6 @@
             "example": "/uploads/sim/123.jpg"
           }
         }
-      },
-      "CsrfTokenResponse": {
-        "type": "object",
-        "properties": {
-          "csrf_token": {
-            "type": "string",
-            "description": "CSRF token untuk keamanan",
-            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-          }
-        }
       }
     },
     "securitySchemes": {
@@ -543,42 +533,10 @@
     }
   ],
   "paths": {
-    "/api/auth/csrf-token": {
-      "get": {
-        "summary": "Mendapatkan CSRF token",
-        "description": "Endpoint untuk mendapatkan CSRF token yang diperlukan untuk keamanan. Token akan otomatis disimpan di HTTP-only cookie dan disertakan dalam semua request POST, PUT, DELETE.",
-        "tags": ["Authentication"],
-        "security": [],
-        "responses": {
-          "200": {
-            "description": "CSRF token berhasil dibuat",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/SuccessResponse"
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "data": {
-                          "$ref": "#/components/schemas/CsrfTokenResponse"
-                        }
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/auth/login": {
       "post": {
         "summary": "Login user",
-        "description": "Endpoint untuk melakukan autentikasi user. User agent dan IP address akan diambil otomatis dari request headers. Refresh token akan disimpan di HTTP-only cookie untuk keamanan.",
+        "description": "Endpoint untuk melakukan autentikasi user. User agent dan IP address akan diambil otomatis dari request headers. Refresh token akan disimpan di HTTP-only cookie untuk keamanan. CSRF token akan digenerate bersamaan dan dikembalikan dalam response.",
         "tags": ["Authentication"],
         "security": [],
         "requestBody": {
@@ -632,6 +590,11 @@
                                 "refresh_token": {
                                   "type": "string",
                                   "description": "Refresh token untuk memperbarui access token",
+                                  "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                },
+                                "csrf_token": {
+                                  "type": "string",
+                                  "description": "CSRF token untuk keamanan request POST/PUT/DELETE",
                                   "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                                 }
                               }

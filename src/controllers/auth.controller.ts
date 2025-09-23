@@ -15,25 +15,6 @@ export class AuthController {
   }
 
   /**
-   * Mengambil CSRF token untuk keamanan.
-   * GET /auth/csrf-token
-   */
-  getCsrfToken = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await this.authService.generateCsrfToken(req, res);
-
-      res.status(StatusCodes.OK).json({
-        success: true,
-        status_code: StatusCodes.OK,
-        message: 'CSRF token berhasil dibuat',
-        data: result
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  /**
    * Melakukan login user.
    * POST /auth/login
    */
@@ -49,6 +30,7 @@ export class AuthController {
         request,
         user_agent,
         ip_address,
+        req,
         res
       );
 

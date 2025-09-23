@@ -27,31 +27,13 @@ export class AuthService {
   }
 
   /**
-   * Generate CSRF token untuk keamanan.
-   */
-  async generateCsrfToken(
-    req: Request,
-    res: Response
-  ): Promise<{ csrf_token: string }> {
-    // Generate CSRF token menggunakan utility dari app.locals
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const generateCsrfToken = (req.app as any).locals.generateToken;
-
-    // Generate token dan set cookie
-    const csrfToken = generateCsrfToken(req, res);
-
-    return {
-      csrf_token: csrfToken
-    };
-  }
-
-  /**
    * Melakukan login user.
    */
   async login(
     request: LoginRequest,
     user_agent?: string,
     ip_address?: string,
+    req?: Request,
     res?: Response
   ): Promise<LoginResponse> {
     const { email, password } = request;
@@ -115,6 +97,14 @@ export class AuthService {
     // Update last login
     await this.authRepository.updateLastLogin(user.user_id);
 
+    // Generate CSRF token
+    let csrfToken = '';
+    if (req && res) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const generateCsrfToken = (req.app as any).locals.generateToken;
+      csrfToken = generateCsrfToken(req, res);
+    }
+
     // Set refresh token cookie jika response object tersedia
     if (res) {
       res.cookie('refresh_token', refreshToken, {
@@ -132,7 +122,8 @@ export class AuthService {
     return {
       tokens: {
         access_token: accessToken,
-        refresh_token: refreshToken
+        refresh_token: refreshToken,
+        csrf_token: csrfToken
       },
       user: userResponse
     };
