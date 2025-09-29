@@ -15,6 +15,7 @@ import { ResponseError } from '../utils/responseError';
 import { StatusCodes } from 'http-status-codes';
 import { SIMValidation } from '../validations/sim.validation';
 import { Validation } from '../validations/validatiom';
+import logger from '../utils/logger';
 
 /**
  * Service untuk operasi bisnis terkait SIM.
@@ -33,6 +34,13 @@ export class SIMService {
     simData: CreateSIMRequest,
     createdBy: string
   ): Promise<SIMResponse> {
+    logger.info({
+      nomor_sim: simData.nomor_sim,
+      nik: simData.nik,
+      created_by: createdBy,
+      message: 'Create SIM attempt started'
+    });
+
     // Validasi input menggunakan Validation utility
     const validatedData = Validation.validate(SIMValidation.CREATE, simData);
 
@@ -41,6 +49,11 @@ export class SIMService {
       validatedData.nomor_sim
     );
     if (nomorSimExists) {
+      logger.warn({
+        nomor_sim: validatedData.nomor_sim,
+        created_by: createdBy,
+        message: 'Create SIM failed: Nomor SIM already exists'
+      });
       throw new ResponseError(
         StatusCodes.CONFLICT,
         'Nomor SIM sudah digunakan oleh SIM lain'
@@ -50,6 +63,11 @@ export class SIMService {
     // Validasi nik sudah ada
     const nikExists = await this.simRepository.isNikExists(validatedData.nik);
     if (nikExists) {
+      logger.warn({
+        nik: validatedData.nik,
+        created_by: createdBy,
+        message: 'Create SIM failed: NIK already exists'
+      });
       throw new ResponseError(
         StatusCodes.CONFLICT,
         'NIK sudah digunakan oleh SIM lain'
@@ -77,7 +95,17 @@ export class SIMService {
       created_by: createdBy
     };
 
-    return await this.simRepository.create(simToCreate);
+    const result = await this.simRepository.create(simToCreate);
+
+    logger.info({
+      sim_id: result.sim_id,
+      nomor_sim: result.nomor_sim,
+      nik: result.nik,
+      created_by: createdBy,
+      message: 'Create SIM successful'
+    });
+
+    return result;
   }
 
   /**
@@ -86,8 +114,19 @@ export class SIMService {
   async getSIMs(
     params: SIMPaginationParams
   ): Promise<PaginationResponse<SIMResponse>> {
+    logger.info({
+      page: params.page,
+      limit: params.limit,
+      search: params.search,
+      message: 'Get SIMs list attempt started'
+    });
+
     // Validasi parameter pagination
     if (params.page < 1) {
+      logger.warn({
+        page: params.page,
+        message: 'Get SIMs failed: Invalid page number'
+      });
       throw new ResponseError(
         StatusCodes.BAD_REQUEST,
         'Halaman harus lebih dari 0'
@@ -95,27 +134,56 @@ export class SIMService {
     }
 
     if (params.limit < 1 || params.limit > 100) {
+      logger.warn({
+        limit: params.limit,
+        message: 'Get SIMs failed: Invalid limit'
+      });
       throw new ResponseError(
         StatusCodes.BAD_REQUEST,
         'Limit harus antara 1-100'
       );
     }
 
-    return await this.simRepository.findAll(params);
+    const result = await this.simRepository.findAll(params);
+
+    logger.info({
+      page: params.page,
+      limit: params.limit,
+      total_items: result.pagination.total_items,
+      total_pages: result.pagination.total_pages,
+      message: 'Get SIMs list successful'
+    });
+
+    return result;
   }
 
   /**
    * Mengambil detail SIM berdasarkan ID.
    */
   async getSIMById(request: GetSIMRequest): Promise<SIMResponse> {
+    logger.info({
+      sim_id: request.sim_id,
+      message: 'Get SIM by ID attempt started'
+    });
+
     // Validasi parameter menggunakan Validation utility
     const validatedParams = Validation.validate(SIMValidation.GET, request);
 
     const sim = await this.simRepository.findById(validatedParams.sim_id);
 
     if (!sim) {
+      logger.warn({
+        sim_id: validatedParams.sim_id,
+        message: 'Get SIM by ID failed: SIM not found'
+      });
       throw new ResponseError(StatusCodes.NOT_FOUND, 'SIM tidak ditemukan');
     }
+
+    logger.info({
+      sim_id: sim.sim_id,
+      nomor_sim: sim.nomor_sim,
+      message: 'Get SIM by ID successful'
+    });
 
     return sim;
   }
@@ -124,12 +192,21 @@ export class SIMService {
    * Memperbarui data SIM.
    */
   async updateSIM(request: UpdateSIMRequest): Promise<SIMResponse> {
+    logger.info({
+      sim_id: request.sim_id,
+      message: 'Update SIM attempt started'
+    });
+
     // Validasi parameter dan data menggunakan Validation utility
     const validatedData = Validation.validate(SIMValidation.UPDATE, request);
 
     // Cek SIM ada atau tidak
     const existingSIM = await this.simRepository.findById(validatedData.sim_id);
     if (!existingSIM) {
+      logger.warn({
+        sim_id: validatedData.sim_id,
+        message: 'Update SIM failed: SIM not found'
+      });
       throw new ResponseError(StatusCodes.NOT_FOUND, 'SIM tidak ditemukan');
     }
 
@@ -143,6 +220,11 @@ export class SIMService {
         validatedData.sim_id
       );
       if (nomorSimExists) {
+        logger.warn({
+          sim_id: validatedData.sim_id,
+          nomor_sim: validatedData.nomor_sim,
+          message: 'Update SIM failed: Nomor SIM already exists'
+        });
         throw new ResponseError(
           StatusCodes.CONFLICT,
           'Nomor SIM sudah digunakan oleh SIM lain'
@@ -157,6 +239,11 @@ export class SIMService {
         validatedData.sim_id
       );
       if (nikExists) {
+        logger.warn({
+          sim_id: validatedData.sim_id,
+          nik: validatedData.nik,
+          message: 'Update SIM failed: NIK already exists'
+        });
         throw new ResponseError(
           StatusCodes.CONFLICT,
           'NIK sudah digunakan oleh SIM lain'
@@ -175,11 +262,21 @@ export class SIMService {
       dataToUpdate
     );
     if (!updatedSIM) {
+      logger.error({
+        sim_id: validatedData.sim_id,
+        message: 'Update SIM failed: Database update failed'
+      });
       throw new ResponseError(
         StatusCodes.INTERNAL_SERVER_ERROR,
         'Gagal memperbarui SIM'
       );
     }
+
+    logger.info({
+      sim_id: updatedSIM.sim_id,
+      nomor_sim: updatedSIM.nomor_sim,
+      message: 'Update SIM successful'
+    });
 
     return updatedSIM;
   }
@@ -188,20 +285,39 @@ export class SIMService {
    * Menghapus SIM.
    */
   async deleteSIM(request: DeleteSIMRequest): Promise<void> {
+    logger.info({
+      sim_id: request.sim_id,
+      message: 'Delete SIM attempt started'
+    });
+
     // Validasi parameter menggunakan Validation utility
     const validatedParams = Validation.validate(SIMValidation.DELETE, request);
 
     const simExists = await this.simRepository.findById(validatedParams.sim_id);
     if (!simExists) {
+      logger.warn({
+        sim_id: validatedParams.sim_id,
+        message: 'Delete SIM failed: SIM not found'
+      });
       throw new ResponseError(StatusCodes.NOT_FOUND, 'SIM tidak ditemukan');
     }
 
     const deleted = await this.simRepository.delete(validatedParams.sim_id);
     if (!deleted) {
+      logger.error({
+        sim_id: validatedParams.sim_id,
+        message: 'Delete SIM failed: Database delete failed'
+      });
       throw new ResponseError(
         StatusCodes.INTERNAL_SERVER_ERROR,
         'Gagal menghapus SIM'
       );
     }
+
+    logger.info({
+      sim_id: validatedParams.sim_id,
+      nomor_sim: simExists.nomor_sim,
+      message: 'Delete SIM successful'
+    });
   }
 }

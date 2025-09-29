@@ -1,4 +1,4 @@
-import express, { Response, Request, Application } from 'express';
+import express, { Response, Request, Application, NextFunction } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { ReasonPhrases, StatusCodes } from 'http-status-codes';
@@ -8,6 +8,7 @@ import swaggerDocument from '../docs/swagger.json';
 import { registerRoutes } from './routes';
 import { errorMiddleware } from './middlewares/error.middleware';
 import { doubleCsrf } from 'csrf-csrf';
+import logger from './utils/logger';
 
 const app: Application = express();
 const theme = new SwaggerTheme();
@@ -37,6 +38,39 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
+// Logging middleware untuk mencatat endpoint yang dihit
+app.use((req: Request, res: Response, next) => {
+  const startTime = Date.now();
+  const { method, url, ip } = req;
+  const userAgent = req.get('User-Agent') || 'Unknown';
+
+  logger.info({
+    method,
+    url,
+    ip,
+    userAgent,
+    message: `Incoming request: ${method} ${url}`
+  });
+
+  // Gunakan event listener untuk mencatat response
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    const { statusCode } = res;
+
+    logger.info({
+      method,
+      url,
+      statusCode,
+      duration: `${duration}ms`,
+      ip,
+      userAgent,
+      message: `Response: ${method} ${url} - ${statusCode} (${duration}ms)`
+    });
+  });
+
+  next();
+});
+
 // CSRF Protection Configuration
 const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
   getSecret: () =>
@@ -58,10 +92,54 @@ const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
 app.use((req, res, next) => {
   // Skip CSRF for auth endpoints that don't need it
   if (req.path === '/api/auth/login' || req.path === '/api/auth/refresh') {
+    logger.info({
+      method: req.method,
+      url: req.url,
+      ip: req.ip,
+      message: 'CSRF protection skipped for auth endpoint'
+    });
     return next();
   }
+
+  logger.info({
+    method: req.method,
+    url: req.url,
+    ip: req.ip,
+    csrf_token: req.headers['x-csrf-token'] ? 'provided' : 'missing',
+    message: 'CSRF protection applied'
+  });
+
   return doubleCsrfProtection(req, res, next);
 });
+
+// CSRF Error handling middleware
+app.use(
+  (
+    err: Error & { code?: string },
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    if (err.code === 'EBADCSRFTOKEN') {
+      logger.warn({
+        method: req.method,
+        url: req.url,
+        ip: req.ip,
+        user_agent: req.get('User-Agent'),
+        csrf_token: req.headers['x-csrf-token'] ? 'provided' : 'missing',
+        error: err.message,
+        message: 'CSRF token validation failed'
+      });
+
+      return res.status(StatusCodes.FORBIDDEN).json({
+        success: false,
+        status_code: StatusCodes.FORBIDDEN,
+        message: 'CSRF token tidak valid atau tidak ditemukan'
+      });
+    }
+    next(err);
+  }
+);
 
 // Make CSRF utilities available globally
 app.locals.generateToken = generateCsrfToken;

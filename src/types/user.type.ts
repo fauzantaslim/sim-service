@@ -63,6 +63,7 @@ export type LoginResponse = {
 export type RefreshTokenResponse = {
   tokens: {
     access_token: string;
+    csrf_token: string;
   };
   user: UserResponse;
 };
