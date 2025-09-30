@@ -107,12 +107,12 @@ export class AuthService {
     const hashedRefreshToken = await hashing(refreshToken);
 
     // Set expires at untuk refresh token (7 hari)
-    // const expiresAt = new Date();
-    // expiresAt.setDate(expiresAt.getDate() + 7);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
 
     // Set expires at untuk refresh token (5 menit)
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 5);
+    // const expiresAt = new Date();
+    // expiresAt.setMinutes(expiresAt.getMinutes() + 5);
 
     // Buat session di database
     await this.sessionRepository.create({
@@ -165,8 +165,8 @@ export class AuthService {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        // maxAge: 7 * 24 * 60 * 60 * 1000, // 7 hari dalam milliseconds
-        maxAge: 5 * 60 * 1000, // 1 menit dalam milliseconds
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 hari dalam milliseconds
+        // maxAge: 5 * 60 * 1000, // 1 menit dalam milliseconds
         path: '/'
       });
     }
