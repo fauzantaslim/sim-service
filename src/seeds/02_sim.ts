@@ -72,7 +72,7 @@ export async function seed(knex: Knex): Promise<void> {
       tempat_lahir: faker.location.city(),
       tanggal_lahir: tanggalLahir,
       pekerjaan: faker.person.jobTitle(),
-      picture_path: `/uploads/sim/${faker.string.alphanumeric(10)}.jpg`,
+      picture_path: faker.image.avatar(),
       created_by: user.user_id
     });
   }
