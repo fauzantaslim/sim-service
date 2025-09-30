@@ -338,7 +338,6 @@
       "CreateSIMRequest": {
         "type": "object",
         "required": [
-          "nomor_sim",
           "full_name",
           "nik",
           "rt",
@@ -356,12 +355,6 @@
           "picture_path"
         ],
         "properties": {
-          "nomor_sim": {
-            "type": "string",
-            "pattern": "^\\d{16}$",
-            "description": "Nomor SIM (16 digit)",
-            "example": "1234567890123456"
-          },
           "full_name": {
             "type": "string",
             "description": "Nama lengkap pemilik SIM",
@@ -727,7 +720,7 @@
     "/api/auth/refresh": {
       "post": {
         "summary": "Refresh access token",
-        "description": "Endpoint untuk memperbarui access token menggunakan refresh token dari HTTP-only cookie. Refresh token akan otomatis diambil dari cookie 'refresh_token' yang diset saat login.",
+        "description": "Endpoint untuk memperbarui access token menggunakan refresh token dari HTTP-only cookie. Refresh token akan otomatis diambil dari cookie 'refresh_token' yang diset saat login. CSRF token baru juga akan digenerate dan dikembalikan dalam response.",
         "tags": ["Authentication"],
         "security": [],
         "parameters": [
@@ -764,6 +757,11 @@
                                 "access_token": {
                                   "type": "string",
                                   "description": "Access token baru",
+                                  "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                                },
+                                "csrf_token": {
+                                  "type": "string",
+                                  "description": "CSRF token baru untuk keamanan request POST/PUT/DELETE",
                                   "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                                 }
                               }
@@ -1203,7 +1201,7 @@
     "/api/sim": {
       "post": {
         "summary": "Membuat SIM baru",
-        "description": "Endpoint untuk membuat SIM baru dengan auto-generated sim_id menggunakan nanoid",
+        "description": "Endpoint untuk membuat SIM baru dengan auto-generated sim_id dan nomor_sim berdasarkan pola NIK. Nomor SIM akan digenerate otomatis berdasarkan NIK, jenis kelamin, dan tanggal lahir. Satu orang (NIK) dapat memiliki multiple SIM dengan jenis yang berbeda, namun tidak dapat memiliki 2 SIM dengan jenis yang sama.",
         "tags": ["SIM"],
         "security": [
           {
@@ -1264,7 +1262,7 @@
             }
           },
           "409": {
-            "description": "Conflict - Nomor SIM sudah digunakan",
+            "description": "Conflict - NIK sudah memiliki SIM dengan jenis yang sama",
             "content": {
               "application/json": {
                 "schema": {
@@ -1565,7 +1563,7 @@
             }
           },
           "409": {
-            "description": "Conflict - Nomor SIM sudah digunakan",
+            "description": "Conflict - NIK sudah memiliki SIM dengan jenis yang sama",
             "content": {
               "application/json": {
                 "schema": {

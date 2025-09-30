@@ -6,7 +6,7 @@ import moment from 'moment-timezone';
  */
 export type CreateSIMRequest = Omit<
   SIM,
-  'sim_id' | 'created_by' | 'created_at' | 'updated_at'
+  'sim_id' | 'nomor_sim' | 'created_by' | 'created_at' | 'updated_at'
 >;
 
 /**

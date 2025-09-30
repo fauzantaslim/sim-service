@@ -97,7 +97,6 @@ export class SIMValidation {
    * Validasi saat membuat SIM baru.
    */
   static readonly CREATE = z.object({
-    nomor_sim: this.baseSchemas.nomorSim,
     full_name: this.baseSchemas.fullName,
     nik: this.baseSchemas.nik,
     rt: this.baseSchemas.rt,

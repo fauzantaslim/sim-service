@@ -245,7 +245,28 @@ export class SIMRepository {
   }
 
   /**
-   * Mengecek apakah NIK sudah digunakan di tabel sim.
+   * Mengecek apakah kombinasi NIK + jenis_sim sudah digunakan di tabel sim.
+   * Satu orang (NIK) tidak boleh memiliki 2 SIM dengan jenis yang sama.
+   */
+  async isNikJenisExists(
+    nik: string,
+    jenisSim: string,
+    excludeSimId?: string
+  ): Promise<boolean> {
+    let query = db(this.tableName)
+      .where('nik', nik)
+      .where('jenis_sim', jenisSim);
+
+    if (excludeSimId) {
+      query = query.whereNot('sim_id', excludeSimId);
+    }
+
+    const sim = await query.first();
+    return !!sim;
+  }
+
+  /**
+   * Mengecek apakah NIK sudah digunakan di tabel sim (untuk keperluan lain).
    */
   async isNikExists(nik: string, excludeSimId?: string): Promise<boolean> {
     let query = db(this.tableName).where('nik', nik);
@@ -256,5 +277,24 @@ export class SIMRepository {
 
     const sim = await query.first();
     return !!sim;
+  }
+
+  /**
+   * Mengambil nomor urut terakhir yang sudah digunakan untuk pattern tertentu.
+   * Pattern adalah 12 digit pertama dari nomor SIM (PPKKCCDDMMYY).
+   */
+  async getLastUsedSequenceNumber(basePattern: string): Promise<number | null> {
+    const result = await db(this.tableName)
+      .where('nomor_sim', 'like', `${basePattern}%`)
+      .orderBy('nomor_sim', 'desc')
+      .first();
+
+    if (!result) {
+      return null;
+    }
+
+    // Ambil 4 digit terakhir sebagai nomor urut
+    const sequenceNumber = parseInt(result.nomor_sim.substring(12, 16), 10);
+    return isNaN(sequenceNumber) ? null : sequenceNumber;
   }
 }

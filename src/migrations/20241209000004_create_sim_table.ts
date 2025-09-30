@@ -10,10 +10,11 @@ export async function up(knex: Knex): Promise<void> {
     table.string('kecamatan', 255).notNullable();
     table.string('kabupaten', 255).notNullable();
     table.string('provinsi', 255).notNullable();
-    table.string('nik', 16).unique().notNullable();
+    table.string('nik', 16).notNullable();
     table
       .enum('jenis_sim', ['a', 'b1', 'b2', 'c', 'c1', 'c2', 'd'])
       .notNullable();
+    table.unique(['nik', 'jenis_sim']); // kombinasi unik
     table.date('tanggal_expired').notNullable();
     table.string('jenis_kelamin', 20).notNullable();
     table.string('gol_darah', 10).notNullable();

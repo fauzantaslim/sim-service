@@ -131,6 +131,7 @@
                   "    const response = pm.response.json();",
                   "    if (response.data && response.data.tokens) {",
                   "        pm.collectionVariables.set('accessToken', response.data.tokens.access_token);",
+                  "        pm.collectionVariables.set('csrfToken', response.data.tokens.csrf_token);",
                   "    }",
                   "}"
                 ],
@@ -153,7 +154,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "refresh"]
             },
-            "description": "Endpoint untuk memperbarui access token menggunakan refresh token dari HTTP-only cookie. Refresh token akan otomatis diambil dari cookie 'refresh_token' yang diset saat login. Tidak memerlukan request body."
+            "description": "Endpoint untuk memperbarui access token menggunakan refresh token dari HTTP-only cookie. Refresh token akan otomatis diambil dari cookie 'refresh_token' yang diset saat login. CSRF token baru juga akan digenerate dan dikembalikan dalam response. Tidak memerlukan request body."
           },
           "response": []
         }
@@ -317,14 +318,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nomor_sim\": \"1234567890123456\",\n  \"full_name\": \"Budi Santoso\",\n  \"nik\": \"3201010101010001\",\n  \"rt\": \"001\",\n  \"rw\": \"002\",\n  \"kecamatan\": \"Cicendo\",\n  \"kabupaten\": \"Bandung\",\n  \"provinsi\": \"Jawa Barat\",\n  \"jenis_sim\": \"c\",\n  \"tanggal_expired\": \"2029-01-01\",\n  \"jenis_kelamin\": \"laki_laki\",\n  \"gol_darah\": \"o\",\n  \"tempat_lahir\": \"Bandung\",\n  \"tanggal_lahir\": \"1990-01-01\",\n  \"pekerjaan\": \"Karyawan Swasta\",\n  \"picture_path\": \"/uploads/sim/123.jpg\"\n}"
+              "raw": "{\n  \"full_name\": \"Budi Santoso\",\n  \"nik\": \"3201010101010001\",\n  \"rt\": \"001\",\n  \"rw\": \"002\",\n  \"kecamatan\": \"Cicendo\",\n  \"kabupaten\": \"Bandung\",\n  \"provinsi\": \"Jawa Barat\",\n  \"jenis_sim\": \"c\",\n  \"tanggal_expired\": \"2029-01-01\",\n  \"jenis_kelamin\": \"laki_laki\",\n  \"gol_darah\": \"o\",\n  \"tempat_lahir\": \"Bandung\",\n  \"tanggal_lahir\": \"1990-01-01\",\n  \"pekerjaan\": \"Karyawan Swasta\",\n  \"picture_path\": \"/uploads/sim/123.jpg\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/sim",
               "host": ["{{baseUrl}}"],
               "path": ["api", "sim"]
             },
-            "description": "Endpoint untuk membuat SIM baru dengan auto-generated sim_id menggunakan nanoid"
+            "description": "Endpoint untuk membuat SIM baru dengan auto-generated sim_id dan nomor_sim berdasarkan pola NIK. Nomor SIM akan digenerate otomatis berdasarkan NIK, jenis kelamin, dan tanggal lahir. Satu orang (NIK) dapat memiliki multiple SIM dengan jenis yang berbeda, namun tidak dapat memiliki 2 SIM dengan jenis yang sama."
           },
           "response": []
         },

@@ -11,6 +11,7 @@ import {
   GetSIMRequest,
   DeleteSIMRequest
 } from '../types/sim.type';
+import { generateNomorSIM } from '../utils/sim-generator';
 import { ResponseError } from '../utils/responseError';
 import { StatusCodes } from 'http-status-codes';
 import { SIMValidation } from '../validations/sim.validation';
@@ -35,7 +36,6 @@ export class SIMService {
     createdBy: string
   ): Promise<SIMResponse> {
     logger.info({
-      nomor_sim: simData.nomor_sim,
       nik: simData.nik,
       created_by: createdBy,
       message: 'Create SIM attempt started'
@@ -44,39 +44,78 @@ export class SIMService {
     // Validasi input menggunakan Validation utility
     const validatedData = Validation.validate(SIMValidation.CREATE, simData);
 
-    // Validasi nomor SIM sudah ada
-    const nomorSimExists = await this.simRepository.isNomorSimExists(
-      validatedData.nomor_sim
+    // Validasi kombinasi NIK + jenis_sim sudah ada
+    const nikJenisExists = await this.simRepository.isNikJenisExists(
+      validatedData.nik,
+      validatedData.jenis_sim
     );
-    if (nomorSimExists) {
+    if (nikJenisExists) {
       logger.warn({
-        nomor_sim: validatedData.nomor_sim,
+        nik: validatedData.nik,
+        jenis_sim: validatedData.jenis_sim,
         created_by: createdBy,
-        message: 'Create SIM failed: Nomor SIM already exists'
+        message: 'Create SIM failed: NIK + jenis SIM combination already exists'
       });
       throw new ResponseError(
         StatusCodes.CONFLICT,
-        'Nomor SIM sudah digunakan oleh SIM lain'
+        `NIK ${validatedData.nik} sudah memiliki SIM jenis ${validatedData.jenis_sim.toUpperCase()}`
       );
     }
 
-    // Validasi nik sudah ada
-    const nikExists = await this.simRepository.isNikExists(validatedData.nik);
-    if (nikExists) {
-      logger.warn({
+    // Generate nomor SIM berdasarkan pola NIK
+    // Cari nomor urut terakhir yang sudah digunakan untuk pattern ini
+    const basePattern =
+      validatedData.nik.substring(0, 6) +
+      (validatedData.jenis_kelamin.toLowerCase() === 'perempuan'
+        ? (validatedData.tanggal_lahir.getDate() + 40)
+            .toString()
+            .padStart(2, '0')
+        : validatedData.tanggal_lahir.getDate().toString().padStart(2, '0')) +
+      (validatedData.tanggal_lahir.getMonth() + 1).toString().padStart(2, '0') +
+      (validatedData.tanggal_lahir.getFullYear() % 100)
+        .toString()
+        .padStart(2, '0');
+
+    // Cari nomor urut terakhir yang sudah digunakan untuk pattern ini
+    const lastUsedNumber =
+      await this.simRepository.getLastUsedSequenceNumber(basePattern);
+    const nomorUrut = (lastUsedNumber || 0) + 1;
+
+    // Generate nomor SIM dengan nomor urut yang sudah dipastikan unik
+    const nomorSIM = generateNomorSIM(
+      validatedData.nik,
+      validatedData.jenis_kelamin,
+      validatedData.tanggal_lahir,
+      nomorUrut
+    );
+
+    // Double check untuk memastikan nomor SIM unik (safety measure)
+    const nomorSimExists = await this.simRepository.isNomorSimExists(nomorSIM);
+    if (nomorSimExists) {
+      logger.error({
         nik: validatedData.nik,
+        nomor_sim: nomorSIM,
         created_by: createdBy,
-        message: 'Create SIM failed: NIK already exists'
+        message:
+          'Create SIM failed: Generated SIM number still exists (race condition)'
       });
       throw new ResponseError(
-        StatusCodes.CONFLICT,
-        'NIK sudah digunakan oleh SIM lain'
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        'Gagal membuat nomor SIM unik'
       );
     }
+
+    logger.info({
+      nik: validatedData.nik,
+      nomor_sim: nomorSIM,
+      nomor_urut: nomorUrut,
+      created_by: createdBy,
+      message: 'SIM number generated successfully'
+    });
 
     // Buat SIM data untuk database
     const simToCreate: Omit<SIM, 'sim_id' | 'created_at' | 'updated_at'> = {
-      nomor_sim: validatedData.nomor_sim,
+      nomor_sim: nomorSIM,
       full_name: validatedData.full_name,
       nik: validatedData.nik,
       rt: validatedData.rt,
@@ -232,21 +271,31 @@ export class SIMService {
       }
     }
 
-    // Validasi nik jika diupdate
-    if (validatedData.nik && validatedData.nik !== existingSIM.nik) {
-      const nikExists = await this.simRepository.isNikExists(
-        validatedData.nik,
+    // Validasi kombinasi NIK + jenis_sim jika diupdate
+    const nikToCheck = validatedData.nik || existingSIM.nik;
+    const jenisSimToCheck = validatedData.jenis_sim || existingSIM.jenis_sim;
+
+    if (
+      (validatedData.nik && validatedData.nik !== existingSIM.nik) ||
+      (validatedData.jenis_sim &&
+        validatedData.jenis_sim !== existingSIM.jenis_sim)
+    ) {
+      const nikJenisExists = await this.simRepository.isNikJenisExists(
+        nikToCheck,
+        jenisSimToCheck,
         validatedData.sim_id
       );
-      if (nikExists) {
+      if (nikJenisExists) {
         logger.warn({
           sim_id: validatedData.sim_id,
-          nik: validatedData.nik,
-          message: 'Update SIM failed: NIK already exists'
+          nik: nikToCheck,
+          jenis_sim: jenisSimToCheck,
+          message:
+            'Update SIM failed: NIK + jenis SIM combination already exists'
         });
         throw new ResponseError(
           StatusCodes.CONFLICT,
-          'NIK sudah digunakan oleh SIM lain'
+          `NIK ${nikToCheck} sudah memiliki SIM jenis ${jenisSimToCheck.toUpperCase()}`
         );
       }
     }
