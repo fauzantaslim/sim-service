@@ -249,28 +249,6 @@ export class SIMService {
       throw new ResponseError(StatusCodes.NOT_FOUND, 'SIM tidak ditemukan');
     }
 
-    // Validasi nomor SIM jika diupdate
-    if (
-      validatedData.nomor_sim &&
-      validatedData.nomor_sim !== existingSIM.nomor_sim
-    ) {
-      const nomorSimExists = await this.simRepository.isNomorSimExists(
-        validatedData.nomor_sim,
-        validatedData.sim_id
-      );
-      if (nomorSimExists) {
-        logger.warn({
-          sim_id: validatedData.sim_id,
-          nomor_sim: validatedData.nomor_sim,
-          message: 'Update SIM failed: Nomor SIM already exists'
-        });
-        throw new ResponseError(
-          StatusCodes.CONFLICT,
-          'Nomor SIM sudah digunakan oleh SIM lain'
-        );
-      }
-    }
-
     // Validasi kombinasi NIK + jenis_sim jika diupdate
     const nikToCheck = validatedData.nik || existingSIM.nik;
     const jenisSimToCheck = validatedData.jenis_sim || existingSIM.jenis_sim;

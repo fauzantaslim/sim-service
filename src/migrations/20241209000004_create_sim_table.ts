@@ -12,7 +12,19 @@ export async function up(knex: Knex): Promise<void> {
     table.string('provinsi', 255).notNullable();
     table.string('nik', 16).notNullable();
     table
-      .enum('jenis_sim', ['a', 'b1', 'b2', 'c', 'c1', 'c2', 'd'])
+      .enum('jenis_sim', [
+        'a',
+        'a_umum',
+        'bi',
+        'bi_umum',
+        'bii',
+        'bii_umum',
+        'c',
+        'ci',
+        'cii',
+        'd',
+        'di'
+      ])
       .notNullable();
     table.unique(['nik', 'jenis_sim']); // kombinasi unik
     table.date('tanggal_expired').notNullable();

@@ -14,7 +14,7 @@ export type CreateSIMRequest = Omit<
  */
 export type UpdateSIMRequest = {
   sim_id: string;
-} & Partial<Omit<SIM, 'sim_id' | 'created_by' | 'created_at'>>;
+} & Partial<Omit<SIM, 'sim_id' | 'nomor_sim' | 'created_by' | 'created_at'>>;
 
 /**
  * Request untuk mengambil detail SIM berdasarkan ID.

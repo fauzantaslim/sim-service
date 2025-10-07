@@ -270,8 +270,20 @@
           },
           "jenis_sim": {
             "type": "string",
-            "enum": ["a", "b1", "b2", "c", "c1", "c2", "d"],
-            "description": "Jenis SIM",
+            "enum": [
+              "a",
+              "a_umum",
+              "bi",
+              "bi_umum",
+              "bii",
+              "bii_umum",
+              "c",
+              "ci",
+              "cii",
+              "d",
+              "di"
+            ],
+            "description": "Jenis SIM (a: SIM A, a_umum: SIM A Umum, bi: SIM BI, bi_umum: SIM BI Umum, bii: SIM BII, bii_umum: SIM BII Umum, c: SIM C, ci: SIM CI, cii: SIM CII, d: SIM D, di: SIM DI)",
             "example": "c"
           },
           "tanggal_expired": {
@@ -385,8 +397,20 @@
           },
           "jenis_sim": {
             "type": "string",
-            "enum": ["a", "b1", "b2", "c", "c1", "c2", "d"],
-            "description": "Jenis SIM",
+            "enum": [
+              "a",
+              "a_umum",
+              "bi",
+              "bi_umum",
+              "bii",
+              "bii_umum",
+              "c",
+              "ci",
+              "cii",
+              "d",
+              "di"
+            ],
+            "description": "Jenis SIM (a: SIM A, a_umum: SIM A Umum, bi: SIM BI, bi_umum: SIM BI Umum, bii: SIM BII, bii_umum: SIM BII Umum, c: SIM C, ci: SIM CI, cii: SIM CII, d: SIM D, di: SIM DI)",
             "example": "c"
           },
           "tanggal_expired": {
@@ -467,8 +491,20 @@
           },
           "jenis_sim": {
             "type": "string",
-            "enum": ["a", "b1", "b2", "c", "c1", "c2", "d"],
-            "description": "Jenis SIM",
+            "enum": [
+              "a",
+              "a_umum",
+              "bi",
+              "bi_umum",
+              "bii",
+              "bii_umum",
+              "c",
+              "ci",
+              "cii",
+              "d",
+              "di"
+            ],
+            "description": "Jenis SIM (a: SIM A, a_umum: SIM A Umum, bi: SIM BI, bi_umum: SIM BI Umum, bii: SIM BII, bii_umum: SIM BII Umum, c: SIM C, ci: SIM CI, cii: SIM CII, d: SIM D, di: SIM DI)",
             "example": "c"
           },
           "tanggal_expired": {
@@ -1201,7 +1237,7 @@
     "/api/sim": {
       "post": {
         "summary": "Membuat SIM baru",
-        "description": "Endpoint untuk membuat SIM baru dengan auto-generated sim_id dan nomor_sim berdasarkan pola NIK. Nomor SIM akan digenerate otomatis berdasarkan NIK, jenis kelamin, dan tanggal lahir. Satu orang (NIK) dapat memiliki multiple SIM dengan jenis yang berbeda, namun tidak dapat memiliki 2 SIM dengan jenis yang sama.",
+        "description": "Endpoint untuk membuat SIM baru dengan auto-generated sim_id dan nomor_sim berdasarkan pola NIK. Nomor SIM akan digenerate otomatis berdasarkan NIK, jenis kelamin, dan tanggal lahir. Satu orang (NIK) dapat memiliki multiple SIM dengan jenis yang berbeda, namun tidak dapat memiliki 2 SIM dengan jenis yang sama. Validasi umur akan dilakukan berdasarkan jenis SIM yang dipilih (SIM A/C/D/DI: 17+, SIM A Umum/BI: 20+, SIM BI Umum: 22+, SIM BII: 21+, SIM BII Umum: 23+, SIM CI: 18+, SIM CII: 19+).",
         "tags": ["SIM"],
         "security": [
           {

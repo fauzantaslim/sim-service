@@ -16,7 +16,19 @@ export async function seed(knex: Knex): Promise<void> {
   }
 
   const sims = [];
-  const jenisSim = ['a', 'b1', 'b2', 'c', 'c1', 'c2', 'd'];
+  const jenisSim = [
+    'a',
+    'a_umum',
+    'bi',
+    'bi_umum',
+    'bii',
+    'bii_umum',
+    'c',
+    'ci',
+    'cii',
+    'd',
+    'di'
+  ];
   const golDarah = ['A', 'B', 'AB', 'O'];
   const jenisKelaminOptions = ['laki_laki', 'perempuan'];
 

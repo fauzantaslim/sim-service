@@ -58,7 +58,7 @@
     * kabupaten : varchar(255)
     * provinsi : varchar(255)
     * nik : char(16) <<unique>>
-    * jenis_sim : enum("a","b1","b2","c","c1","c2","d")
+    * jenis_sim : enum("a","a_umum","bi","bi_umum","bii","bii_umum","c","ci","cii","d","di")
     * tanggal_expired : date
     * jenis_kelamin : varchar(20)
     * gol_darah : varchar(10)
