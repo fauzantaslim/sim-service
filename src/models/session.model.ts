@@ -5,7 +5,8 @@ export interface Session {
   expires_at: Date;
   user_agent?: string;
   ip_address?: string;
-  user_id: string;
+  user_id?: string;
+  admin_id?: string;
   created_at: Date;
   updated_at: Date;
   revoked_at?: Date;

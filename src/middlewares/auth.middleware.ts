@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { verifyAccessToken } from '../utils/jwt';
-import { UserRequest } from '../types/request.type';
+import { AuthRequest, Role, AuthPayload } from '../types/request.type';
 import { ResponseError } from '../utils/responseError';
 import jwt from 'jsonwebtoken';
 import { StatusCodes } from 'http-status-codes';
@@ -9,13 +9,38 @@ import { StatusCodes } from 'http-status-codes';
  * Middleware untuk mendeserialisasi token JWT dari header Authorization.
  * Jika token valid, data user akan disimpan di req.user.
  *
- * @param req Request Express (UserRequest)
+ * @param req Request Express (AuthRequest)
  * @param res Response Express
  * @param next NextFunction
  * @returns Melanjutkan ke middleware berikutnya atau mengembalikan error jika token tidak valid.
  */
+
+/**
+ * Memvalidasi payload token untuk admin.
+ */
+const validateAdminPayload = (payload: jwt.JwtPayload) => {
+  return (
+    typeof payload.admin_id === 'string' &&
+    typeof payload.email === 'string' &&
+    typeof payload.full_name === 'string'
+  );
+};
+
+/**
+ * Memvalidasi payload token untuk user.
+ */
+const validateUserPayload = (payload: jwt.JwtPayload) => {
+  return (
+    typeof payload.user_id === 'string' &&
+    typeof payload.phone_number === 'string' &&
+    (typeof payload.full_name === 'string' ||
+      payload.full_name === null ||
+      payload.full_name === undefined)
+  );
+};
+
 export const deserializeToken = (
-  req: UserRequest,
+  req: AuthRequest,
   res: Response,
   next: NextFunction
 ) => {
@@ -64,28 +89,34 @@ export const deserializeToken = (
     }
 
     const jwtPayload = decoded as jwt.JwtPayload;
+    const { role } = jwtPayload as { role: Role };
 
-    if (
-      typeof jwtPayload.user_id !== 'string' ||
-      (typeof jwtPayload.is_active !== 'boolean' &&
-        typeof jwtPayload.is_active !== 'number') ||
-      typeof jwtPayload.email !== 'string' ||
-      typeof jwtPayload.full_name !== 'string'
-    ) {
+    if (!role || (role !== 'admin' && role !== 'user')) {
       return next(
         new ResponseError(
           StatusCodes.FORBIDDEN,
-          'Format payload token tidak valid.'
+          'Peran (role) dalam token tidak valid.'
         )
       );
     }
 
-    req.user = {
-      user_id: jwtPayload.user_id,
-      email: jwtPayload.email,
-      full_name: jwtPayload.full_name,
-      is_active: Boolean(jwtPayload.is_active)
-    };
+    let isValidPayload = false;
+    if (role === 'admin') {
+      isValidPayload = validateAdminPayload(jwtPayload);
+    } else if (role === 'user') {
+      isValidPayload = validateUserPayload(jwtPayload);
+    }
+
+    if (!isValidPayload) {
+      return next(
+        new ResponseError(
+          StatusCodes.FORBIDDEN,
+          'Format payload token tidak sesuai dengan perannya.'
+        )
+      );
+    }
+
+    req.auth = jwtPayload as AuthPayload;
 
     next();
   } catch (error) {

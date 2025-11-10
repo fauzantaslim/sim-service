@@ -1,28 +1,24 @@
 import { Application, Router } from 'express';
 import { deserializeToken } from '../middlewares/auth.middleware';
-import { AuthController } from '../controllers/auth.controller';
 
-import userRoutes from './user.routes';
+// Impor semua rute modular
+import authUserRoutes from './authUser.routes';
+import authAdminRoutes from './authAdmin.routes';
+
 import simRoutes from './sim.routes';
+import satpasRoutes from './satpas.routes';
 
 export const registerRoutes = (app: Application): void => {
-  const publicRouter = Router();
-  const privateRouter = Router();
-  const authController = new AuthController();
+  const apiRouter = Router();
 
-  // Public routes
-  publicRouter.post('/auth/login', authController.login);
-  publicRouter.post('/auth/refresh', authController.refreshToken);
+  // Daftarkan setiap modul rute di bawah prefiks yang sesuai
+  apiRouter.use('/auth/users', authUserRoutes);
+  apiRouter.use('/auth/admin', authAdminRoutes);
 
-  // Private routes middleware
-  privateRouter.use(deserializeToken);
+  // Private routes - memerlukan autentikasi
+  apiRouter.use('/sim', deserializeToken, simRoutes);
+  apiRouter.use('/satpas', deserializeToken, satpasRoutes);
 
-  // Register private routes
-  privateRouter.post('/auth/logout', authController.logout);
-  privateRouter.get('/auth/me', authController.me);
-  privateRouter.use('/users', userRoutes);
-  privateRouter.use('/sim', simRoutes);
-
-  app.use('/api', publicRouter);
-  app.use('/api', privateRouter);
+  // Pasang semua rute di bawah prefiks /api
+  app.use('/api', apiRouter);
 };

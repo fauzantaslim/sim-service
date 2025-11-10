@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { SIMService } from '../services/sim.service';
-import { UserRequest } from '../types/request.type';
+import { AuthRequest } from '../types/request.type';
 import { SIMPaginationParams } from '../types/pagination.type';
 import {
   CreateSIMRequest,
@@ -53,9 +53,9 @@ export class SIMController {
    * Membuat SIM baru.
    * POST /sim
    */
-  createSIM = async (req: UserRequest, res: Response, next: NextFunction) => {
+  createSIM = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      if (!req.user) {
+      if (!req.auth) {
         throw new ResponseError(
           StatusCodes.UNAUTHORIZED,
           'User tidak terautentikasi'
@@ -66,7 +66,9 @@ export class SIMController {
       const request: CreateSIMRequest = req.body as CreateSIMRequest;
       const newSIM = await this.simService.createSIM(
         request,
-        req.user.user_id.toString()
+        req.auth.role === 'user'
+          ? req.auth.user_id.toString()
+          : req.auth.admin_id.toString()
       );
 
       res.status(StatusCodes.CREATED).json({
@@ -84,7 +86,7 @@ export class SIMController {
    * Mengambil daftar SIM dengan pagination dan filter.
    * GET /sim
    */
-  getSIMs = async (req: UserRequest, res: Response, next: NextFunction) => {
+  getSIMs = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const sortBy = req.query.sort_by as string;
       const validSortBy = this.validateSortField(sortBy);
@@ -117,7 +119,7 @@ export class SIMController {
    * Mengambil detail SIM berdasarkan ID.
    * GET /sim/:simId
    */
-  getSIMById = async (req: UserRequest, res: Response, next: NextFunction) => {
+  getSIMById = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const request: GetSIMRequest = {
         sim_id: req.params.simId
@@ -140,7 +142,7 @@ export class SIMController {
    * Memperbarui data SIM.
    * PUT /sim/:simId
    */
-  updateSIM = async (req: UserRequest, res: Response, next: NextFunction) => {
+  updateSIM = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       // Semua field baru sudah didukung di UpdateSIMRequest
       const request: UpdateSIMRequest = {
@@ -164,7 +166,7 @@ export class SIMController {
    * Menghapus SIM.
    * DELETE /sim/:simId
    */
-  deleteSIM = async (req: UserRequest, res: Response, next: NextFunction) => {
+  deleteSIM = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const request: DeleteSIMRequest = {
         sim_id: req.params.simId

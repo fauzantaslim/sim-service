@@ -6,6 +6,7 @@ import { SwaggerTheme, SwaggerThemeNameEnum } from 'swagger-themes';
 import swaggerUi from 'swagger-ui-express';
 import swaggerDocument from '../docs/swagger.json';
 import { registerRoutes } from './routes';
+import { connectToWhatsApp } from './utils/whatsapp';
 import { errorMiddleware } from './middlewares/error.middleware';
 import { doubleCsrf } from 'csrf-csrf';
 import logger from './utils/logger';
@@ -90,8 +91,18 @@ const { doubleCsrfProtection, generateCsrfToken } = doubleCsrf({
 
 // Apply CSRF protection to all routes except auth endpoints
 app.use((req, res, next) => {
-  // Skip CSRF for auth endpoints that don't need it
-  if (req.path === '/api/auth/login' || req.path === '/api/auth/refresh') {
+  // Skip CSRF for auth endpoints that don't need it (register, login, refresh)
+  const skipCsrfPaths = new Set([
+    '/api/auth/users/register',
+    '/api/auth/users/verify-otp',
+    '/api/auth/users/set-pin',
+    '/api/auth/users/login',
+    '/api/auth/users/refresh',
+    '/api/auth/admin/login',
+    '/api/auth/admin/refresh'
+  ]);
+
+  if (skipCsrfPaths.has(req.path)) {
     logger.info({
       method: req.method,
       url: req.url,
@@ -149,6 +160,11 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // Auth endpoints sudah dipindahkan ke auth routes
+
+// Connect to WhatsApp
+connectToWhatsApp().catch((err) =>
+  logger.error('Failed to connect to WhatsApp:', err)
+);
 
 // Register routes
 registerRoutes(app);

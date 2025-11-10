@@ -7,17 +7,16 @@ export async function seed(knex: Knex): Promise<void> {
   // Hapus data lama
   await knex('users').del();
 
-  // Hash password default
-  const hashedPassword = await bcrypt.hash('password', 10);
+  // Hash PIN default
+  const hashedPin = await bcrypt.hash('123456', 10);
 
   // User default
   const users = [
     {
       user_id: nanoid(21),
-      email: 'admin@example.com',
-      full_name: 'Administrator',
-      password: hashedPassword,
-      is_active: true
+      full_name: 'User Satu',
+      phone_number: '081234567890',
+      pin: hashedPin
     }
   ];
 
@@ -25,10 +24,9 @@ export async function seed(knex: Knex): Promise<void> {
   for (let i = 0; i < 10; i++) {
     users.push({
       user_id: nanoid(21),
-      email: faker.internet.email(),
       full_name: faker.person.fullName(),
-      password: hashedPassword, // semua pakai "password"
-      is_active: faker.datatype.boolean()
+      phone_number: faker.phone.number(),
+      pin: hashedPin // Semua pakai PIN "123456"
     });
   }
 

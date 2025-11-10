@@ -1,8 +1,8 @@
 {
   "info": {
-    "name": "SIM Service API",
-    "description": "API untuk Sistem Informasi Manajemen dengan fitur CRUD User, KTP (Kartu Tanda Penduduk), dan SIM (Surat Izin Mengemudi). Mendukung autentikasi JWT, pagination, search, dan sorting.",
-    "version": "1.0.0",
+    "name": "SIM Service API - Updated",
+    "description": "API untuk Sistem Informasi Manajemen SIM dengan fitur OTP WhatsApp, JWT Authentication, dan CSRF Protection",
+    "version": "2.0.0",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -25,6 +25,11 @@
       "key": "csrfToken",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
     }
   ],
   "auth": {
@@ -39,11 +44,140 @@
   },
   "item": [
     {
-      "name": "Authentication",
-      "description": "Endpoints untuk autentikasi",
+      "name": "User Authentication",
+      "description": "Endpoints untuk autentikasi user dengan OTP WhatsApp",
       "item": [
         {
-          "name": "Login",
+          "name": "1. Register / Check Phone",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('has_pin:', response.data.has_pin);",
+                  "    console.log('requires_otp:', response.data.requires_otp);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"081234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/users/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "users", "register"]
+            },
+            "description": "Endpoint untuk register atau check phone number. Response:\n- has_pin: true -> redirect ke login PIN\n- requires_otp: true -> redirect ke verify OTP"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Verify OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.user_id) {",
+                  "        pm.collectionVariables.set('userId', response.data.user_id);",
+                  "        console.log('User ID saved:', response.data.user_id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone_number\": \"081234567890\",\n  \"otp\": \"ABC123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/users/verify-otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "users", "verify-otp"]
+            },
+            "description": "Verifikasi OTP yang dikirim via WhatsApp. Response akan berisi user_id untuk digunakan di step berikutnya."
+          },
+          "response": []
+        },
+        {
+          "name": "3. Set PIN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.tokens) {",
+                  "        pm.collectionVariables.set('accessToken', response.data.tokens.access_token);",
+                  "        pm.collectionVariables.set('refreshToken', response.data.tokens.refresh_token);",
+                  "        pm.collectionVariables.set('csrfToken', response.data.tokens.csrf_token);",
+                  "        console.log('Tokens saved successfully');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"pin\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/users/set-pin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "users", "set-pin"]
+            },
+            "description": "Set PIN setelah OTP terverifikasi. User akan langsung login dan mendapat tokens."
+          },
+          "response": []
+        },
+        {
+          "name": "4. Login with PIN",
           "event": [
             {
               "listen": "test",
@@ -75,48 +209,28 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password\"\n}"
+              "raw": "{\n  \"phone_number\": \"081234567890\",\n  \"pin\": \"123456\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/auth/login",
+              "raw": "{{baseUrl}}/api/auth/users/login",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "login"]
+              "path": ["api", "auth", "users", "login"]
             },
-            "description": "Endpoint untuk melakukan autentikasi user. User agent dan IP address akan diambil otomatis dari request headers. Refresh token akan disimpan di HTTP-only cookie untuk keamanan. CSRF token akan digenerate bersamaan dan dikembalikan dalam response."
+            "description": "Login dengan phone number dan PIN untuk user yang sudah terdaftar."
           },
           "response": []
         },
         {
-          "name": "Get Profile (Me)",
+          "name": "Get User Profile",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/auth/me",
+              "raw": "{{baseUrl}}/api/auth/users/me",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "me"]
+              "path": ["api", "auth", "users", "me"]
             },
-            "description": "Endpoint untuk mengambil profil user yang sedang login (memerlukan autentikasi)"
-          },
-          "response": []
-        },
-        {
-          "name": "Logout",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "X-CSRF-Token",
-                "value": "{{csrfToken}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/auth/logout",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "logout"]
-            },
-            "description": "Endpoint untuk melakukan logout user dan menghapus session"
+            "description": "Mendapatkan profil user yang sedang login (memerlukan access token)"
           },
           "response": []
         },
@@ -145,140 +259,123 @@
             },
             "method": "POST",
             "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": ""
-            },
             "url": {
-              "raw": "{{baseUrl}}/api/auth/refresh",
+              "raw": "{{baseUrl}}/api/auth/users/refresh",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "refresh"]
+              "path": ["api", "auth", "users", "refresh"]
             },
-            "description": "Endpoint untuk memperbarui access token menggunakan refresh token dari HTTP-only cookie. Refresh token akan otomatis diambil dari cookie 'refresh_token' yang diset saat login. CSRF token baru juga akan digenerate dan dikembalikan dalam response. Tidak memerlukan request body."
+            "description": "Refresh access token menggunakan refresh token dari HTTP-only cookie"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/users/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "users", "logout"]
+            },
+            "description": "Logout user dan revoke session (memerlukan CSRF token)"
           },
           "response": []
         }
       ]
     },
     {
-      "name": "Users",
-      "description": "Endpoints untuk operasi CRUD user",
+      "name": "Admin Authentication",
+      "description": "Endpoints untuk autentikasi admin",
       "item": [
         {
-          "name": "Create User",
+          "name": "Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.tokens) {",
+                  "        pm.collectionVariables.set('accessToken', response.data.tokens.access_token);",
+                  "        pm.collectionVariables.set('refreshToken', response.data.tokens.refresh_token);",
+                  "        pm.collectionVariables.set('csrfToken', response.data.tokens.csrf_token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json"
-              },
-              {
-                "key": "X-CSRF-Token",
-                "value": "{{csrfToken}}",
-                "type": "text"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"full_name\": \"John Doe\",\n  \"password\": \"password123\",\n  \"is_active\": true\n}"
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/users",
+              "raw": "{{baseUrl}}/api/auth/admin/login",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "users"]
+              "path": ["api", "auth", "admin", "login"]
             },
-            "description": "Endpoint untuk membuat user baru dengan auto-generated user_id menggunakan nanoid"
+            "description": "Login admin dengan email dan password"
           },
           "response": []
         },
         {
-          "name": "Get All Users",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/users?page=1&limit=10&search=&sort_by=created_at&sort_order=desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users"],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "1",
-                  "description": "Nomor halaman"
-                },
-                {
-                  "key": "limit",
-                  "value": "10",
-                  "description": "Jumlah data per halaman"
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "description": "Kata kunci pencarian"
-                },
-                {
-                  "key": "sort_by",
-                  "value": "created_at",
-                  "description": "Field untuk sorting"
-                },
-                {
-                  "key": "sort_order",
-                  "value": "desc",
-                  "description": "Urutan sorting"
-                }
-              ]
-            },
-            "description": "Endpoint untuk mengambil daftar user dengan pagination dan search"
-          },
-          "response": []
-        },
-        {
-          "name": "Get User by ID",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/users/V1StGXR8_Z5jdHi6B-myT",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "V1StGXR8_Z5jdHi6B-myT"]
-            },
-            "description": "Endpoint untuk mengambil detail user berdasarkan ID"
-          },
-          "response": []
-        },
-        {
-          "name": "Update User",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "X-CSRF-Token",
-                "value": "{{csrfToken}}",
-                "type": "text"
+          "name": "Admin Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.data && response.data.tokens) {",
+                  "        pm.collectionVariables.set('accessToken', response.data.tokens.access_token);",
+                  "        pm.collectionVariables.set('csrfToken', response.data.tokens.csrf_token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
               }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"john.doe.new@example.com\",\n  \"full_name\": \"John Doe Updated\",\n  \"password\": \"newpassword123\",\n  \"is_active\": false\n}"
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
             },
+            "method": "POST",
+            "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/users/V1StGXR8_Z5jdHi6B-myT",
+              "raw": "{{baseUrl}}/api/auth/admin/refresh",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "V1StGXR8_Z5jdHi6B-myT"]
+              "path": ["api", "auth", "admin", "refresh"]
             },
-            "description": "Endpoint untuk memperbarui data user berdasarkan ID"
+            "description": "Refresh access token admin"
           },
           "response": []
         },
         {
-          "name": "Delete User",
+          "name": "Admin Logout",
           "request": {
-            "method": "DELETE",
+            "method": "POST",
             "header": [
               {
                 "key": "X-CSRF-Token",
@@ -287,19 +384,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/users/V1StGXR8_Z5jdHi6B-myT",
+              "raw": "{{baseUrl}}/api/auth/admin/logout",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "V1StGXR8_Z5jdHi6B-myT"]
+              "path": ["api", "auth", "admin", "logout"]
             },
-            "description": "Endpoint untuk menghapus user berdasarkan ID"
+            "description": "Logout admin (memerlukan authentication dan CSRF token)"
           },
           "response": []
         }
       ]
     },
     {
-      "name": "SIM",
-      "description": "Endpoints untuk operasi CRUD SIM (Surat Izin Mengemudi)",
+      "name": "SIM Management",
+      "description": "Endpoints untuk CRUD SIM (Surat Izin Mengemudi)",
       "item": [
         {
           "name": "Create SIM",
@@ -325,7 +422,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "sim"]
             },
-            "description": "Endpoint untuk membuat SIM baru dengan auto-generated sim_id dan nomor_sim berdasarkan pola NIK. Nomor SIM akan digenerate otomatis berdasarkan NIK, jenis kelamin, dan tanggal lahir. Satu orang (NIK) dapat memiliki multiple SIM dengan jenis yang berbeda, namun tidak dapat memiliki 2 SIM dengan jenis yang sama. Validasi umur akan dilakukan berdasarkan jenis SIM yang dipilih (SIM A/C/D/DI: 17+, SIM A Umum/BI: 20+, SIM BI Umum: 22+, SIM BII: 21+, SIM BII Umum: 23+, SIM CI: 18+, SIM CII: 19+)."
+            "description": "Membuat SIM baru (memerlukan authentication dan CSRF token). Nomor SIM akan digenerate otomatis."
           },
           "response": []
         },
@@ -352,7 +449,7 @@
                 {
                   "key": "search",
                   "value": "",
-                  "description": "Kata kunci pencarian berdasarkan nomor SIM atau jenis SIM"
+                  "description": "Kata kunci pencarian"
                 },
                 {
                   "key": "sort_by",
@@ -362,7 +459,7 @@
                 {
                   "key": "sort_order",
                   "value": "desc",
-                  "description": "Urutan sorting"
+                  "description": "Urutan sorting (asc/desc)"
                 },
                 {
                   "key": "jenis_sim",
@@ -371,7 +468,7 @@
                 }
               ]
             },
-            "description": "Endpoint untuk mengambil daftar SIM dengan pagination, search, dan sorting"
+            "description": "Mendapatkan daftar SIM dengan pagination, search, dan filter"
           },
           "response": []
         },
@@ -381,11 +478,17 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/sim/V1StGXR8_Z5jdHi6B-myT",
+              "raw": "{{baseUrl}}/api/sim/:simId",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "sim", "V1StGXR8_Z5jdHi6B-myT"]
+              "path": ["api", "sim", ":simId"],
+              "variable": [
+                {
+                  "key": "simId",
+                  "value": "V1StGXR8_Z5jdHi6B-myT"
+                }
+              ]
             },
-            "description": "Endpoint untuk mengambil detail SIM berdasarkan ID"
+            "description": "Mendapatkan detail SIM berdasarkan ID"
           },
           "response": []
         },
@@ -406,14 +509,20 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nomor_sim\": \"1234567890123456\",\n  \"full_name\": \"Budi Santoso Updated\",\n  \"nik\": \"3201010101010001\",\n  \"rt\": \"001\",\n  \"rw\": \"002\",\n  \"kecamatan\": \"Cicendo\",\n  \"kabupaten\": \"Bandung\",\n  \"provinsi\": \"Jawa Barat\",\n  \"jenis_sim\": \"c\",\n  \"tanggal_expired\": \"2029-01-01\",\n  \"jenis_kelamin\": \"laki_laki\",\n  \"gol_darah\": \"o\",\n  \"tempat_lahir\": \"Bandung\",\n  \"tanggal_lahir\": \"1990-01-01\",\n  \"pekerjaan\": \"Karyawan Swasta\",\n  \"picture_path\": \"/uploads/sim/123.jpg\"\n}"
+              "raw": "{\n  \"full_name\": \"Budi Santoso Updated\",\n  \"rt\": \"002\",\n  \"rw\": \"003\",\n  \"kecamatan\": \"Cicendo\",\n  \"kabupaten\": \"Bandung\",\n  \"provinsi\": \"Jawa Barat\",\n  \"tanggal_expired\": \"2030-01-01\",\n  \"pekerjaan\": \"Wiraswasta\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/sim/V1StGXR8_Z5jdHi6B-myT",
+              "raw": "{{baseUrl}}/api/sim/:simId",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "sim", "V1StGXR8_Z5jdHi6B-myT"]
+              "path": ["api", "sim", ":simId"],
+              "variable": [
+                {
+                  "key": "simId",
+                  "value": "V1StGXR8_Z5jdHi6B-myT"
+                }
+              ]
             },
-            "description": "Endpoint untuk memperbarui data SIM berdasarkan ID"
+            "description": "Update data SIM berdasarkan ID (memerlukan CSRF token)"
           },
           "response": []
         },
@@ -429,11 +538,172 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/sim/V1StGXR8_Z5jdHi6B-myT",
+              "raw": "{{baseUrl}}/api/sim/:simId",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "sim", "V1StGXR8_Z5jdHi6B-myT"]
+              "path": ["api", "sim", ":simId"],
+              "variable": [
+                {
+                  "key": "simId",
+                  "value": "V1StGXR8_Z5jdHi6B-myT"
+                }
+              ]
             },
-            "description": "Endpoint untuk menghapus SIM berdasarkan ID"
+            "description": "Hapus SIM berdasarkan ID (memerlukan CSRF token)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Satpas Management",
+      "description": "Endpoints untuk CRUD Satpas (Satuan Lalu Lintas Kepolisian)",
+      "item": [
+        {
+          "name": "Create Satpas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Satpas Bandung Timur\",\n  \"latitude\": -6.914744,\n  \"longitude\": 107.609810\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/satpas",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "satpas"]
+            },
+            "description": "Membuat Satpas baru (Admin only - memerlukan authentication dan CSRF token). Satpas ID akan digenerate otomatis."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Satpas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/satpas?page=1&limit=10&search=&sort_by=created_at&sort_order=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "satpas"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Nomor halaman"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Jumlah data per halaman (max 100)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Kata kunci pencarian (nama Satpas)"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "created_at",
+                  "description": "Field untuk sorting (name, latitude, longitude, created_at, updated_at)"
+                },
+                {
+                  "key": "sort_order",
+                  "value": "desc",
+                  "description": "Urutan sorting (asc/desc)"
+                }
+              ]
+            },
+            "description": "Mendapatkan daftar Satpas dengan pagination, search, dan sorting (memerlukan authentication)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Satpas by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/satpas/:satpasId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "satpas", ":satpasId"],
+              "variable": [
+                {
+                  "key": "satpasId",
+                  "value": "V1StGXR8_Z5jdHi6B-myT"
+                }
+              ]
+            },
+            "description": "Mendapatkan detail Satpas berdasarkan ID (memerlukan authentication)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Satpas",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Satpas Bandung Timur - Updated\",\n  \"latitude\": -6.914744,\n  \"longitude\": 107.609810\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/satpas/:satpasId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "satpas", ":satpasId"],
+              "variable": [
+                {
+                  "key": "satpasId",
+                  "value": "V1StGXR8_Z5jdHi6B-myT"
+                }
+              ]
+            },
+            "description": "Update data Satpas berdasarkan ID (Admin only - memerlukan CSRF token). Semua field optional."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Satpas",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/satpas/:satpasId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "satpas", ":satpasId"],
+              "variable": [
+                {
+                  "key": "satpasId",
+                  "value": "V1StGXR8_Z5jdHi6B-myT"
+                }
+              ]
+            },
+            "description": "Hapus Satpas berdasarkan ID (Admin only - memerlukan CSRF token)"
           },
           "response": []
         }

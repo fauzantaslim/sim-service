@@ -85,6 +85,18 @@ export class SessionRepository {
   }
 
   /**
+   * Mengambil semua session admin yang aktif.
+   */
+  async findByAdminId(adminId: string): Promise<SessionResponse[]> {
+    const sessions = await db(this.tableName)
+      .where('admin_id', adminId)
+      .whereNull('revoked_at')
+      .orderBy('created_at', 'desc');
+
+    return sessions.map(toSessionResponse);
+  }
+
+  /**
    * Memperbarui data session.
    */
   async update(
@@ -131,6 +143,17 @@ export class SessionRepository {
   }
 
   /**
+   * Menghapus semua session admin.
+   */
+  async deleteByAdminId(adminId: string): Promise<number> {
+    const deletedRows = await db(this.tableName)
+      .where('admin_id', adminId)
+      .del();
+
+    return deletedRows;
+  }
+
+  /**
    * Revoke session (soft delete).
    */
   async revoke(sessionId: number): Promise<boolean> {
@@ -150,6 +173,21 @@ export class SessionRepository {
   async revokeByUserId(userId: string): Promise<number> {
     const updatedRows = await db(this.tableName)
       .where('user_id', userId)
+      .whereNull('revoked_at')
+      .update({
+        revoked_at: db.fn.now(),
+        updated_at: db.fn.now()
+      });
+
+    return updatedRows;
+  }
+
+  /**
+   * Revoke semua session admin.
+   */
+  async revokeByAdminId(adminId: string): Promise<number> {
+    const updatedRows = await db(this.tableName)
+      .where('admin_id', adminId)
       .whereNull('revoked_at')
       .update({
         revoked_at: db.fn.now(),

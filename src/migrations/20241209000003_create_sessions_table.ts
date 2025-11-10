@@ -7,7 +7,8 @@ export async function up(knex: Knex): Promise<void> {
     table.timestamp('expires_at').notNullable();
     table.string('user_agent', 255);
     table.string('ip_address', 25);
-    table.string('user_id', 21).notNullable();
+    table.string('user_id', 21);
+    table.string('admin_id', 21);
     table.timestamp('created_at').defaultTo(knex.fn.now());
     table.timestamp('updated_at').defaultTo(knex.fn.now());
     table.timestamp('revoked_at');
@@ -18,9 +19,15 @@ export async function up(knex: Knex): Promise<void> {
       .references('user_id')
       .inTable('users')
       .onDelete('CASCADE');
+    table
+      .foreign('admin_id')
+      .references('admin_id')
+      .inTable('admin')
+      .onDelete('CASCADE');
 
     // Indexes
     table.index(['user_id']);
+    table.index(['admin_id']);
     table.index(['refresh_token']);
     table.index(['expires_at']);
     table.index(['revoked_at']);
