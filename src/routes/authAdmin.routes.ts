@@ -11,5 +11,6 @@ router.post('/refresh', authController.refreshTokenAdmin);
 
 // PRIVATE (middleware auth dipasang di index.ts)
 router.post('/logout', deserializeToken, authController.logoutAdmin);
+router.get('/me', deserializeToken, authController.getMe);
 
 export default router;

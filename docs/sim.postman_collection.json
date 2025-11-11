@@ -391,6 +391,43 @@
             "description": "Logout admin (memerlukan authentication dan CSRF token)"
           },
           "response": []
+        },
+        {
+          "name": "Admin Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/admin/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "admin", "me"]
+            },
+            "description": "Mendapatkan profil admin yang sedang login (memerlukan access token sebagai Bearer Token)."
+          },
+          "response": [
+            {
+              "name": "Success Example",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth/admin/me",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth", "admin", "me"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"success\": true,\n  \"status_code\": 200,\n  \"message\": \"Data admin berhasil diambil\",\n  \"data\": {\n    \"admin_id\": \"abc123\",\n    \"email\": \"admin@example.com\",\n    \"full_name\": \"Nama Admin\",\n    \"created_at\": \"2024-06-11T10:00:00.000Z\",\n    \"updated_at\": \"2024-06-11T10:04:00.000Z\"\n  }\n}"
+            }
+          ]
         }
       ]
     },
@@ -704,6 +741,161 @@
               ]
             },
             "description": "Hapus Satpas berdasarkan ID (Admin only - memerlukan CSRF token)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin Management",
+      "description": "Endpoints untuk CRUD Admin (Admin only)",
+      "item": [
+        {
+          "name": "Create Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin2@example.com\",\n  \"full_name\": \"Admin Dua\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin"]
+            },
+            "description": "Membuat Admin baru (Admin only - memerlukan authentication dan CSRF token). Admin ID akan digenerate otomatis. Password akan di-hash sebelum disimpan."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Admin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin?page=1&limit=10&search=&sort_by=created_at&sort_order=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Nomor halaman"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Jumlah data per halaman (max 100)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Kata kunci pencarian (email atau nama)"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "created_at",
+                  "description": "Field untuk sorting (email, full_name, created_at, updated_at)"
+                },
+                {
+                  "key": "sort_order",
+                  "value": "desc",
+                  "description": "Urutan sorting (asc/desc)"
+                }
+              ]
+            },
+            "description": "Mendapatkan daftar Admin dengan pagination, search, dan sorting (Admin only - memerlukan authentication). Password tidak disertakan dalam response."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Admin by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/:adminId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", ":adminId"],
+              "variable": [
+                {
+                  "key": "adminId",
+                  "value": "V1StGXR8_Z5jdHi6B-myT"
+                }
+              ]
+            },
+            "description": "Mendapatkan detail Admin berdasarkan ID (Admin only - memerlukan authentication). Password tidak disertakan dalam response."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Admin",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin2updated@example.com\",\n  \"full_name\": \"Admin Dua Updated\",\n  \"password\": \"newpassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/:adminId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", ":adminId"],
+              "variable": [
+                {
+                  "key": "adminId",
+                  "value": "V1StGXR8_Z5jdHi6B-myT"
+                }
+              ]
+            },
+            "description": "Update data Admin berdasarkan ID (Admin only - memerlukan CSRF token). Semua field optional. Password akan di-hash jika diupdate."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Admin",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/:adminId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", ":adminId"],
+              "variable": [
+                {
+                  "key": "adminId",
+                  "value": "V1StGXR8_Z5jdHi6B-myT"
+                }
+              ]
+            },
+            "description": "Hapus Admin berdasarkan ID (Admin only - memerlukan CSRF token)"
           },
           "response": []
         }

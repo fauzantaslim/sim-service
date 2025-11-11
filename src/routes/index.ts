@@ -7,6 +7,7 @@ import authAdminRoutes from './authAdmin.routes';
 
 import simRoutes from './sim.routes';
 import satpasRoutes from './satpas.routes';
+import adminRoutes from './admin.routes';
 
 export const registerRoutes = (app: Application): void => {
   const apiRouter = Router();
@@ -18,6 +19,7 @@ export const registerRoutes = (app: Application): void => {
   // Private routes - memerlukan autentikasi
   apiRouter.use('/sim', deserializeToken, simRoutes);
   apiRouter.use('/satpas', deserializeToken, satpasRoutes);
+  apiRouter.use('/admin', deserializeToken, adminRoutes);
 
   // Pasang semua rute di bawah prefiks /api
   app.use('/api', apiRouter);

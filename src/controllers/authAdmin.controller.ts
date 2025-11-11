@@ -90,4 +90,24 @@ export class AuthAdminController {
       next(error);
     }
   };
+
+  getMe = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { auth } = req;
+      if (auth?.role !== 'admin') {
+        return res
+          .status(StatusCodes.FORBIDDEN)
+          .json({ message: 'Akses ditolak atau token tidak valid' });
+      }
+      const admin = await this.authService.getMe(auth.admin_id);
+      res.status(StatusCodes.OK).json({
+        success: true,
+        status_code: StatusCodes.OK,
+        message: 'Data admin berhasil diambil',
+        data: admin
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

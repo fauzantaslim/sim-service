@@ -15,7 +15,7 @@ export class AuthAdminRepository {
   }
 
   /**
-   * Mengambil admin berdasarkan ID untuk validasi token.
+   * Mengambil admin berdasarkan ID (untuk endpoint /me).
    */
   async findById(adminId: string): Promise<Admin | null> {
     return await db(this.tableName).where('admin_id', adminId).first();

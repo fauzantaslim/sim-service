@@ -13,6 +13,7 @@ import {
   AdminLogoutResponse,
   AdminResponse
 } from '../types/authAdmin.type';
+import { toAdminResponse } from '../types/authAdmin.type';
 
 /**
  * Service untuk business logic autentikasi admin.
@@ -187,5 +188,19 @@ export class AuthAdminService {
         updated_at: admin.updated_at
       }
     };
+  }
+
+  /**
+   * Mengambil data admin yang sedang login.
+   */
+  async getMe(adminId: string) {
+    const admin = await this.authRepository.findById(adminId);
+    if (!admin) {
+      throw new ResponseError(
+        StatusCodes.UNAUTHORIZED,
+        'Admin tidak ditemukan'
+      );
+    }
+    return toAdminResponse(admin);
   }
 }
