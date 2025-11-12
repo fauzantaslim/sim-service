@@ -8,6 +8,7 @@ import authAdminRoutes from './authAdmin.routes';
 import simRoutes from './sim.routes';
 import satpasRoutes from './satpas.routes';
 import adminRoutes from './admin.routes';
+import pendaftaranSIMRoutes from './pendaftaranSIM.routes';
 
 export const registerRoutes = (app: Application): void => {
   const apiRouter = Router();
@@ -20,6 +21,7 @@ export const registerRoutes = (app: Application): void => {
   apiRouter.use('/sim', deserializeToken, simRoutes);
   apiRouter.use('/satpas', deserializeToken, satpasRoutes);
   apiRouter.use('/admin', deserializeToken, adminRoutes);
+  apiRouter.use('/pendaftaran', deserializeToken, pendaftaranSIMRoutes);
 
   // Pasang semua rute di bawah prefiks /api
   app.use('/api', apiRouter);

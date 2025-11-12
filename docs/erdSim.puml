@@ -73,7 +73,15 @@ entity SIM {
   * satpas_id : char(21) <<FK>>
   * jenis_sim : enum("a","a_umum","bi","bi_umum","bii","bii_umum","c","ci","cii","d","di")
   * tanggal_ujian : date
-  * status : enum("diajukan","diperiksa","disetujui","ditolak","selesai")
+  * status : enum(
+    "diajukan",
+    "diperiksa",
+    "disetujui",
+    "proses_ujian",
+    "ujian_gagal",
+    "selesai",
+    "ditolak"
+  )
   --
   * created_at : timestamp
   updated_at : timestamp

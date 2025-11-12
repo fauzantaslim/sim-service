@@ -1,12 +1,11 @@
 import { Response, NextFunction } from 'express';
 import { SIMService } from '../services/sim.service';
 import { AuthRequest } from '../types/request.type';
-import { SIMPaginationParams } from '../types/pagination.type';
+import { PaginationParams } from '../types/pagination.type';
 import {
   CreateSIMRequest,
   UpdateSIMRequest,
-  GetSIMRequest,
-  DeleteSIMRequest
+  GetSIMRequest
 } from '../types/sim.type';
 import { ResponseError } from '../utils/responseError';
 import { StatusCodes } from 'http-status-codes';
@@ -27,20 +26,8 @@ export class SIMController {
   private validateSortField(sortBy: string): string {
     const allowedSortFields = new Set([
       'nomor_sim',
-      'full_name',
-      'nik',
-      'rt',
-      'rw',
-      'kecamatan',
-      'kabupaten',
-      'provinsi',
-      'jenis_sim',
+      'tanggal_terbit',
       'tanggal_expired',
-      'jenis_kelamin',
-      'gol_darah',
-      'tempat_lahir',
-      'tanggal_lahir',
-      'pekerjaan',
       'creator_name',
       'created_at',
       'updated_at'
@@ -50,8 +37,9 @@ export class SIMController {
   }
 
   /**
-   * Membuat SIM baru.
+   * Membuat SIM baru dengan upload foto.
    * POST /sim
+   * Admin only
    */
   createSIM = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
@@ -62,13 +50,46 @@ export class SIMController {
         );
       }
 
-      // Semua field baru sudah didukung di CreateSIMRequest
-      const request: CreateSIMRequest = req.body as CreateSIMRequest;
+      // Hanya admin yang bisa membuat SIM
+      if (req.auth.role !== 'admin') {
+        throw new ResponseError(
+          StatusCodes.FORBIDDEN,
+          'Hanya admin yang dapat membuat SIM'
+        );
+      }
+
+      // Check if file uploaded
+      if (!req.file) {
+        throw new ResponseError(
+          StatusCodes.BAD_REQUEST,
+          'Foto SIM harus diupload'
+        );
+      }
+
+      // Validate file type
+      const allowedMimes = new Set([
+        'image/jpeg',
+        'image/jpg',
+        'image/png',
+        'image/webp'
+      ]);
+      if (!allowedMimes.has(req.file.mimetype)) {
+        throw new ResponseError(
+          StatusCodes.BAD_REQUEST,
+          'Format file tidak valid. Hanya JPG, JPEG, PNG, dan WEBP yang diperbolehkan.'
+        );
+      }
+
+      const request: CreateSIMRequest = {
+        pendaftaran_id: req.body.pendaftaran_id,
+        tanggal_terbit: req.body.tanggal_terbit,
+        tanggal_expired: req.body.tanggal_expired
+      };
+
       const newSIM = await this.simService.createSIM(
         request,
-        req.auth.role === 'user'
-          ? req.auth.user_id.toString()
-          : req.auth.admin_id.toString()
+        req.file.buffer,
+        req.auth.admin_id.toString()
       );
 
       res.status(StatusCodes.CREATED).json({
@@ -83,22 +104,36 @@ export class SIMController {
   };
 
   /**
-   * Mengambil daftar SIM dengan pagination dan filter.
+   * Mengambil daftar SIM dengan pagination.
    * GET /sim
+   * Admin only
    */
   getSIMs = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
+      if (!req.auth) {
+        throw new ResponseError(
+          StatusCodes.UNAUTHORIZED,
+          'User tidak terautentikasi'
+        );
+      }
+
+      // Hanya admin yang bisa melihat daftar SIM
+      if (req.auth.role !== 'admin') {
+        throw new ResponseError(
+          StatusCodes.FORBIDDEN,
+          'Hanya admin yang dapat melihat daftar SIM'
+        );
+      }
+
       const sortBy = req.query.sort_by as string;
       const validSortBy = this.validateSortField(sortBy);
 
-      // Validasi query parameters termasuk filter enum
-      const paginationParams: SIMPaginationParams = {
+      const paginationParams: PaginationParams = {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
         search: req.query.search as string,
         sort_by: validSortBy,
-        sort_order: (req.query.sort_order as 'asc' | 'desc') || 'desc',
-        jenis_sim: req.query.jenis_sim as string
+        sort_order: (req.query.sort_order as 'asc' | 'desc') || 'desc'
       };
 
       const result = await this.simService.getSIMs(paginationParams);
@@ -118,9 +153,25 @@ export class SIMController {
   /**
    * Mengambil detail SIM berdasarkan ID.
    * GET /sim/:simId
+   * Admin only
    */
   getSIMById = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
+      if (!req.auth) {
+        throw new ResponseError(
+          StatusCodes.UNAUTHORIZED,
+          'User tidak terautentikasi'
+        );
+      }
+
+      // Hanya admin yang bisa melihat detail SIM
+      if (req.auth.role !== 'admin') {
+        throw new ResponseError(
+          StatusCodes.FORBIDDEN,
+          'Hanya admin yang dapat melihat detail SIM'
+        );
+      }
+
       const request: GetSIMRequest = {
         sim_id: req.params.simId
       };
@@ -139,17 +190,52 @@ export class SIMController {
   };
 
   /**
-   * Memperbarui data SIM.
-   * PUT /sim/:simId
+   * Memperbarui data SIM (tanggal expired dan/atau foto).
+   * PATCH /sim/:simId
+   * Admin only
    */
   updateSIM = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      // Semua field baru sudah didukung di UpdateSIMRequest
+      if (!req.auth) {
+        throw new ResponseError(
+          StatusCodes.UNAUTHORIZED,
+          'User tidak terautentikasi'
+        );
+      }
+
+      // Hanya admin yang bisa update SIM
+      if (req.auth.role !== 'admin') {
+        throw new ResponseError(
+          StatusCodes.FORBIDDEN,
+          'Hanya admin yang dapat memperbarui SIM'
+        );
+      }
+
+      // Validate file type if file is uploaded
+      if (req.file) {
+        const allowedMimes = new Set([
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'image/webp'
+        ]);
+        if (!allowedMimes.has(req.file.mimetype)) {
+          throw new ResponseError(
+            StatusCodes.BAD_REQUEST,
+            'Format file tidak valid. Hanya JPG, JPEG, PNG, dan WEBP yang diperbolehkan.'
+          );
+        }
+      }
+
       const request: UpdateSIMRequest = {
-        ...req.body,
-        sim_id: req.params.simId
+        sim_id: req.params.simId,
+        tanggal_expired: req.body.tanggal_expired
       };
-      const updatedSIM = await this.simService.updateSIM(request);
+
+      const updatedSIM = await this.simService.updateSIM(
+        request,
+        req.file?.buffer
+      );
 
       res.status(StatusCodes.OK).json({
         success: true,
@@ -165,10 +251,26 @@ export class SIMController {
   /**
    * Menghapus SIM.
    * DELETE /sim/:simId
+   * Admin only
    */
   deleteSIM = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const request: DeleteSIMRequest = {
+      if (!req.auth) {
+        throw new ResponseError(
+          StatusCodes.UNAUTHORIZED,
+          'User tidak terautentikasi'
+        );
+      }
+
+      // Hanya admin yang bisa delete SIM
+      if (req.auth.role !== 'admin') {
+        throw new ResponseError(
+          StatusCodes.FORBIDDEN,
+          'Hanya admin yang dapat menghapus SIM'
+        );
+      }
+
+      const request: GetSIMRequest = {
         sim_id: req.params.simId
       };
       await this.simService.deleteSIM(request);

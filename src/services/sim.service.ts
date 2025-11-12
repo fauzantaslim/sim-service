@@ -1,136 +1,90 @@
 import { SIMRepository } from '../repositories/sim.repository';
-import { SIM, JenisSIM } from '../models/sim.model';
-import {
-  SIMPaginationParams,
-  PaginationResponse
-} from '../types/pagination.type';
+import { SIM } from '../models/sim.model';
+import { PaginationParams, PaginationResponse } from '../types/pagination.type';
 import {
   SIMResponse,
   CreateSIMRequest,
   UpdateSIMRequest,
-  GetSIMRequest,
-  DeleteSIMRequest
+  GetSIMRequest
 } from '../types/sim.type';
-import { generateNomorSIM } from '../utils/sim-generator';
 import { ResponseError } from '../utils/responseError';
 import { StatusCodes } from 'http-status-codes';
 import { SIMValidation } from '../validations/sim.validation';
 import { Validation } from '../validations/validatiom';
 import logger from '../utils/logger';
+import { processAndSaveImage, deleteImage } from '../utils/imageUpload';
+import { PendaftaranSIMRepository } from '../repositories/pendaftaranSIM.repository';
 
 /**
  * Service untuk operasi bisnis terkait SIM.
  */
 export class SIMService {
   private simRepository: SIMRepository;
+  private pendaftaranRepository: PendaftaranSIMRepository;
 
   constructor() {
     this.simRepository = new SIMRepository();
+    this.pendaftaranRepository = new PendaftaranSIMRepository();
   }
 
   /**
-   * Membuat SIM baru.
+   * Membuat SIM baru dengan upload foto.
    */
   async createSIM(
     simData: CreateSIMRequest,
+    pictureBuffer: Buffer,
     createdBy: string
   ): Promise<SIMResponse> {
     logger.info({
-      nik: simData.nik,
+      pendaftaran_id: simData.pendaftaran_id,
       created_by: createdBy,
       message: 'Create SIM attempt started'
     });
 
-    // Validasi input menggunakan Validation utility
+    // Validasi input
     const validatedData = Validation.validate(SIMValidation.CREATE, simData);
 
-    // Validasi kombinasi NIK + jenis_sim sudah ada
-    const nikJenisExists = await this.simRepository.isNikJenisExists(
-      validatedData.nik,
-      validatedData.jenis_sim
+    // Cek pendaftaran exists dan statusnya selesai
+    const pendaftaran = await this.pendaftaranRepository.findById(
+      validatedData.pendaftaran_id
     );
-    if (nikJenisExists) {
-      logger.warn({
-        nik: validatedData.nik,
-        jenis_sim: validatedData.jenis_sim,
-        created_by: createdBy,
-        message: 'Create SIM failed: NIK + jenis SIM combination already exists'
-      });
+    if (!pendaftaran) {
+      throw new ResponseError(
+        StatusCodes.NOT_FOUND,
+        'Pendaftaran tidak ditemukan'
+      );
+    }
+
+    if (pendaftaran.status !== 'selesai') {
+      throw new ResponseError(
+        StatusCodes.BAD_REQUEST,
+        `Pendaftaran harus berstatus selesai. Status saat ini: ${pendaftaran.status}`
+      );
+    }
+
+    // Cek apakah pendaftaran sudah punya SIM
+    const hasSIM = await this.simRepository.isPendaftaranHasSIM(
+      validatedData.pendaftaran_id
+    );
+    if (hasSIM) {
       throw new ResponseError(
         StatusCodes.CONFLICT,
-        `NIK ${validatedData.nik} sudah memiliki SIM jenis ${validatedData.jenis_sim.toUpperCase()}`
+        'Pendaftaran ini sudah memiliki SIM'
       );
     }
 
-    // Generate nomor SIM berdasarkan pola NIK
-    // Cari nomor urut terakhir yang sudah digunakan untuk pattern ini
-    const basePattern =
-      validatedData.nik.substring(0, 6) +
-      (validatedData.jenis_kelamin.toLowerCase() === 'perempuan'
-        ? (validatedData.tanggal_lahir.getDate() + 40)
-            .toString()
-            .padStart(2, '0')
-        : validatedData.tanggal_lahir.getDate().toString().padStart(2, '0')) +
-      (validatedData.tanggal_lahir.getMonth() + 1).toString().padStart(2, '0') +
-      (validatedData.tanggal_lahir.getFullYear() % 100)
-        .toString()
-        .padStart(2, '0');
-
-    // Cari nomor urut terakhir yang sudah digunakan untuk pattern ini
-    const lastUsedNumber =
-      await this.simRepository.getLastUsedSequenceNumber(basePattern);
-    const nomorUrut = (lastUsedNumber || 0) + 1;
-
-    // Generate nomor SIM dengan nomor urut yang sudah dipastikan unik
-    const nomorSIM = generateNomorSIM(
-      validatedData.nik,
-      validatedData.jenis_kelamin,
-      validatedData.tanggal_lahir,
-      nomorUrut
-    );
-
-    // Double check untuk memastikan nomor SIM unik (safety measure)
-    const nomorSimExists = await this.simRepository.isNomorSimExists(nomorSIM);
-    if (nomorSimExists) {
-      logger.error({
-        nik: validatedData.nik,
-        nomor_sim: nomorSIM,
-        created_by: createdBy,
-        message:
-          'Create SIM failed: Generated SIM number still exists (race condition)'
-      });
-      throw new ResponseError(
-        StatusCodes.INTERNAL_SERVER_ERROR,
-        'Gagal membuat nomor SIM unik'
-      );
-    }
-
-    logger.info({
-      nik: validatedData.nik,
-      nomor_sim: nomorSIM,
-      nomor_urut: nomorUrut,
-      created_by: createdBy,
-      message: 'SIM number generated successfully'
-    });
+    // Process dan save image
+    const picturePath = await processAndSaveImage(pictureBuffer, 'sim', 'sim');
 
     // Buat SIM data untuk database
-    const simToCreate: Omit<SIM, 'sim_id' | 'created_at' | 'updated_at'> = {
-      nomor_sim: nomorSIM,
-      full_name: validatedData.full_name,
-      nik: validatedData.nik,
-      rt: validatedData.rt,
-      rw: validatedData.rw,
-      kecamatan: validatedData.kecamatan,
-      kabupaten: validatedData.kabupaten,
-      provinsi: validatedData.provinsi,
-      jenis_sim: validatedData.jenis_sim as JenisSIM,
-      tanggal_expired: validatedData.tanggal_expired,
-      jenis_kelamin: validatedData.jenis_kelamin,
-      gol_darah: validatedData.gol_darah,
-      tempat_lahir: validatedData.tempat_lahir,
-      tanggal_lahir: validatedData.tanggal_lahir,
-      pekerjaan: validatedData.pekerjaan,
-      picture_path: validatedData.picture_path,
+    const simToCreate: Omit<
+      SIM,
+      'sim_id' | 'nomor_sim' | 'created_at' | 'updated_at'
+    > = {
+      pendaftaran_id: validatedData.pendaftaran_id,
+      tanggal_terbit: new Date(validatedData.tanggal_terbit),
+      tanggal_expired: new Date(validatedData.tanggal_expired),
+      picture_path: picturePath,
       created_by: createdBy
     };
 
@@ -139,7 +93,7 @@ export class SIMService {
     logger.info({
       sim_id: result.sim_id,
       nomor_sim: result.nomor_sim,
-      nik: result.nik,
+      pendaftaran_id: result.pendaftaran_id,
       created_by: createdBy,
       message: 'Create SIM successful'
     });
@@ -151,7 +105,7 @@ export class SIMService {
    * Mengambil daftar SIM dengan pagination.
    */
   async getSIMs(
-    params: SIMPaginationParams
+    params: PaginationParams
   ): Promise<PaginationResponse<SIMResponse>> {
     logger.info({
       page: params.page,
@@ -228,15 +182,18 @@ export class SIMService {
   }
 
   /**
-   * Memperbarui data SIM.
+   * Memperbarui data SIM (hanya tanggal expired).
    */
-  async updateSIM(request: UpdateSIMRequest): Promise<SIMResponse> {
+  async updateSIM(
+    request: UpdateSIMRequest,
+    pictureBuffer?: Buffer
+  ): Promise<SIMResponse> {
     logger.info({
       sim_id: request.sim_id,
       message: 'Update SIM attempt started'
     });
 
-    // Validasi parameter dan data menggunakan Validation utility
+    // Validasi parameter dan data
     const validatedData = Validation.validate(SIMValidation.UPDATE, request);
 
     // Cek SIM ada atau tidak
@@ -249,40 +206,30 @@ export class SIMService {
       throw new ResponseError(StatusCodes.NOT_FOUND, 'SIM tidak ditemukan');
     }
 
-    // Validasi kombinasi NIK + jenis_sim jika diupdate
-    const nikToCheck = validatedData.nik || existingSIM.nik;
-    const jenisSimToCheck = validatedData.jenis_sim || existingSIM.jenis_sim;
+    // Prepare update data
+    const dataToUpdate: Partial<
+      Pick<SIM, 'tanggal_expired' | 'picture_path' | 'updated_at'>
+    > = {};
 
-    if (
-      (validatedData.nik && validatedData.nik !== existingSIM.nik) ||
-      (validatedData.jenis_sim &&
-        validatedData.jenis_sim !== existingSIM.jenis_sim)
-    ) {
-      const nikJenisExists = await this.simRepository.isNikJenisExists(
-        nikToCheck,
-        jenisSimToCheck,
-        validatedData.sim_id
-      );
-      if (nikJenisExists) {
-        logger.warn({
-          sim_id: validatedData.sim_id,
-          nik: nikToCheck,
-          jenis_sim: jenisSimToCheck,
-          message:
-            'Update SIM failed: NIK + jenis SIM combination already exists'
-        });
-        throw new ResponseError(
-          StatusCodes.CONFLICT,
-          `NIK ${nikToCheck} sudah memiliki SIM jenis ${jenisSimToCheck.toUpperCase()}`
-        );
-      }
+    if (validatedData.tanggal_expired) {
+      dataToUpdate.tanggal_expired = new Date(validatedData.tanggal_expired);
     }
 
-    // Hapus sim_id dari update data karena tidak boleh diupdate
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { sim_id: _sim_id, ...dataToUpdate } = validatedData as Partial<
-      Omit<SIM, 'sim_id' | 'created_by' | 'created_at'>
-    > & { sim_id?: string };
+    // Process new picture if provided
+    if (pictureBuffer) {
+      // Delete old picture
+      if (existingSIM.picture_path) {
+        await deleteImage(existingSIM.picture_path);
+      }
+
+      // Save new picture
+      const newPicturePath = await processAndSaveImage(
+        pictureBuffer,
+        'sim',
+        'sim'
+      );
+      dataToUpdate.picture_path = newPicturePath;
+    }
 
     const updatedSIM = await this.simRepository.update(
       validatedData.sim_id,
@@ -311,13 +258,13 @@ export class SIMService {
   /**
    * Menghapus SIM.
    */
-  async deleteSIM(request: DeleteSIMRequest): Promise<void> {
+  async deleteSIM(request: GetSIMRequest): Promise<void> {
     logger.info({
       sim_id: request.sim_id,
       message: 'Delete SIM attempt started'
     });
 
-    // Validasi parameter menggunakan Validation utility
+    // Validasi parameter
     const validatedParams = Validation.validate(SIMValidation.DELETE, request);
 
     const simExists = await this.simRepository.findById(validatedParams.sim_id);
@@ -327,6 +274,11 @@ export class SIMService {
         message: 'Delete SIM failed: SIM not found'
       });
       throw new ResponseError(StatusCodes.NOT_FOUND, 'SIM tidak ditemukan');
+    }
+
+    // Delete picture file
+    if (simExists.picture_path) {
+      await deleteImage(simExists.picture_path);
     }
 
     const deleted = await this.simRepository.delete(validatedParams.sim_id);

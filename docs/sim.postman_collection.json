@@ -900,6 +900,176 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Pendaftaran SIM",
+      "description": "Endpoints untuk manajemen Pendaftaran SIM (User & Admin)",
+      "item": [
+        {
+          "name": "Create Pendaftaran (User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"satpas_id\": \"V1StGXR8_Z5jdHi6B-myT\",\n  \"jenis_sim\": \"c\",\n  \"tanggal_ujian\": \"2025-12-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/pendaftaran",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pendaftaran"]
+            },
+            "description": "Membuat pendaftaran SIM baru (User only - memerlukan authentication dan CSRF token). Kode pendaftaran akan digenerate otomatis. User tidak bisa mendaftar 2x untuk jenis SIM yang sama jika masih ada pendaftaran aktif."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Pendaftaran (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pendaftaran?page=1&limit=10&search=&sort_by=created_at&sort_order=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pendaftaran"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Nomor halaman"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Jumlah data per halaman (max 100)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Kata kunci pencarian (kode pendaftaran atau status)"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "created_at",
+                  "description": "Field untuk sorting (kode_pendaftaran, tanggal_ujian, status, created_at, updated_at)"
+                },
+                {
+                  "key": "sort_order",
+                  "value": "desc",
+                  "description": "Urutan sorting (asc/desc)"
+                }
+              ]
+            },
+            "description": "Mendapatkan semua pendaftaran SIM dengan pagination, search, dan sorting (Admin only - memerlukan authentication)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Pendaftaran (User)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pendaftaran/me?page=1&limit=10&search=&sort_by=created_at&sort_order=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pendaftaran", "me"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Nomor halaman"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Jumlah data per halaman (max 100)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Kata kunci pencarian (kode pendaftaran atau status)"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "created_at",
+                  "description": "Field untuk sorting (kode_pendaftaran, tanggal_ujian, status, created_at, updated_at)"
+                },
+                {
+                  "key": "sort_order",
+                  "value": "desc",
+                  "description": "Urutan sorting (asc/desc)"
+                }
+              ]
+            },
+            "description": "Mendapatkan daftar pendaftaran SIM milik user yang sedang login (User only - user_id diambil dari token). Dengan pagination, search, dan sorting."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Pendaftaran by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/pendaftaran/:pendaftaranId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pendaftaran", ":pendaftaranId"],
+              "variable": [
+                {
+                  "key": "pendaftaranId",
+                  "value": "V1StGXR8_Z5jdHi6B-myT"
+                }
+              ]
+            },
+            "description": "Mendapatkan detail pendaftaran SIM berdasarkan ID. User hanya bisa melihat pendaftaran miliknya sendiri. Admin bisa melihat semua pendaftaran."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Status Pendaftaran (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"diperiksa\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/pendaftaran/:pendaftaranId/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "pendaftaran", ":pendaftaranId", "status"],
+              "variable": [
+                {
+                  "key": "pendaftaranId",
+                  "value": "V1StGXR8_Z5jdHi6B-myT"
+                }
+              ]
+            },
+            "description": "Update status pendaftaran SIM (Admin only - memerlukan CSRF token). Hanya field status yang bisa diubah. Status transition harus valid:\n\n- diajukan → diperiksa, ditolak\n- diperiksa → disetujui, ditolak\n- disetujui → proses_ujian\n- proses_ujian → ujian_gagal, selesai\n- ujian_gagal → proses_ujian (retry)\n- selesai → (final state)\n- ditolak → (final state)\n\nValid status: diajukan, diperiksa, disetujui, proses_ujian, ujian_gagal, selesai, ditolak"
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

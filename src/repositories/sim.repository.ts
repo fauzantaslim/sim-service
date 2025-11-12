@@ -1,11 +1,9 @@
 import { SIM } from '../models/sim.model';
-import {
-  SIMPaginationParams,
-  PaginationResponse
-} from '../types/pagination.type';
+import { PaginationParams, PaginationResponse } from '../types/pagination.type';
 import { SIMResponse, toSIMResponse } from '../types/sim.type';
 import db from '../configs/database';
 import { nanoid } from 'nanoid';
+import logger from '../utils/logger';
 
 /**
  * Repository untuk operasi database terkait SIM.
@@ -24,26 +22,14 @@ export class SIMRepository {
   ) {
     const allowedSortFields = new Set([
       'nomor_sim',
-      'full_name',
-      'nik',
-      'rt',
-      'rw',
-      'kecamatan',
-      'kabupaten',
-      'provinsi',
-      'jenis_sim',
+      'tanggal_terbit',
       'tanggal_expired',
-      'jenis_kelamin',
-      'gol_darah',
-      'tempat_lahir',
-      'tanggal_lahir',
-      'pekerjaan',
       'created_at',
       'updated_at'
     ]);
 
     if (sort_by === 'creator_name') {
-      return query.orderBy('users.full_name', sort_order);
+      return query.orderBy('admin.full_name', sort_order);
     } else if (allowedSortFields.has(sort_by)) {
       return query.orderBy(`sim.${sort_by}`, sort_order);
     } else {
@@ -53,25 +39,62 @@ export class SIMRepository {
   }
 
   /**
+   * Generate nomor SIM unik dengan format 16 digit
+   * Format: YYYYMMDD + 8 digit random
+   */
+  private async generateNomorSIM(): Promise<string> {
+    const now = new Date();
+    const year = now.getFullYear().toString();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+
+    const prefix = `${year}${month}${day}`;
+
+    // Generate 8 digit random number
+    let nomorSim: string;
+    let exists = true;
+
+    while (exists) {
+      const randomPart = Math.floor(
+        10000000 + Math.random() * 90000000
+      ).toString();
+      nomorSim = `${prefix}${randomPart}`;
+
+      // Check if exists
+      exists = await this.isNomorSimExists(nomorSim);
+    }
+
+    return nomorSim!;
+  }
+
+  /**
    * Membuat SIM baru di database.
    */
   async create(
-    simData: Omit<SIM, 'sim_id' | 'created_at' | 'updated_at'>
+    simData: Omit<SIM, 'sim_id' | 'nomor_sim' | 'created_at' | 'updated_at'>
   ): Promise<SIMResponse> {
-    // Generate sim_id menggunakan nanoid
     const simId = nanoid();
+    const nomorSim = await this.generateNomorSIM();
+
+    logger.info({
+      sim_id: simId,
+      nomor_sim: nomorSim,
+      pendaftaran_id: simData.pendaftaran_id,
+      message: 'Creating new SIM'
+    });
 
     await db(this.tableName).insert({
       ...simData,
       sim_id: simId,
+      nomor_sim: nomorSim,
       created_at: db.fn.now(),
       updated_at: db.fn.now()
     });
 
     // Ambil SIM yang baru dibuat dengan creator_name
     const sim = await db(this.tableName)
-      .leftJoin('users', 'sim.created_by', 'users.user_id')
-      .select('sim.*', 'users.full_name as creator_name')
+      .leftJoin('admin', 'sim.created_by', 'admin.admin_id')
+      .select('sim.*', 'admin.full_name as creator_name')
       .where('sim.sim_id', simId)
       .first();
 
@@ -83,47 +106,32 @@ export class SIMRepository {
   }
 
   /**
-   * Mengambil semua SIM dengan pagination, search, dan filter enum.
+   * Mengambil semua SIM dengan pagination dan search.
    */
   async findAll(
-    params: SIMPaginationParams
+    params: PaginationParams
   ): Promise<PaginationResponse<SIMResponse>> {
     const {
       page,
       limit,
       search,
       sort_by = 'created_at',
-      sort_order = 'desc',
-      jenis_sim
+      sort_order = 'desc'
     } = params;
     const offset = (page - 1) * limit;
 
-    // Query builder untuk data dengan JOIN ke users untuk creator_name
+    // Query builder untuk data dengan JOIN ke admin untuk creator_name
     let query = db(this.tableName)
-      .leftJoin('users', 'sim.created_by', 'users.user_id')
-      .select('sim.*', 'users.full_name as creator_name');
+      .leftJoin('admin', 'sim.created_by', 'admin.admin_id')
+      .select('sim.*', 'admin.full_name as creator_name');
 
     // Filter search jika ada
     if (search) {
       query = query.where(function () {
         this.where('sim.nomor_sim', 'like', `%${search}%`)
-          .orWhere('sim.nik', 'like', `%${search}%`)
-          .orWhere('sim.full_name', 'like', `%${search}%`)
-          .orWhere('sim.kecamatan', 'like', `%${search}%`)
-          .orWhere('sim.kabupaten', 'like', `%${search}%`)
-          .orWhere('sim.provinsi', 'like', `%${search}%`)
-          .orWhere('sim.jenis_sim', 'like', `%${search}%`)
-          .orWhere('sim.jenis_kelamin', 'like', `%${search}%`)
-          .orWhere('sim.gol_darah', 'like', `%${search}%`)
-          .orWhere('sim.tempat_lahir', 'like', `%${search}%`)
-          .orWhere('sim.pekerjaan', 'like', `%${search}%`)
-          .orWhere('users.full_name', 'like', `%${search}%`);
+          .orWhere('sim.pendaftaran_id', 'like', `%${search}%`)
+          .orWhere('admin.full_name', 'like', `%${search}%`);
       });
-    }
-
-    // Filter enum jika ada
-    if (jenis_sim) {
-      query = query.where('sim.jenis_sim', jenis_sim);
     }
 
     // Sorting dengan validasi field
@@ -134,30 +142,16 @@ export class SIMRepository {
 
     // Query untuk total count
     let countQuery = db(this.tableName).leftJoin(
-      'users',
+      'admin',
       'sim.created_by',
-      'users.user_id'
+      'admin.admin_id'
     );
     if (search) {
       countQuery = countQuery.where(function () {
         this.where('sim.nomor_sim', 'like', `%${search}%`)
-          .orWhere('sim.nik', 'like', `%${search}%`)
-          .orWhere('sim.full_name', 'like', `%${search}%`)
-          .orWhere('sim.kecamatan', 'like', `%${search}%`)
-          .orWhere('sim.kabupaten', 'like', `%${search}%`)
-          .orWhere('sim.provinsi', 'like', `%${search}%`)
-          .orWhere('sim.jenis_sim', 'like', `%${search}%`)
-          .orWhere('sim.jenis_kelamin', 'like', `%${search}%`)
-          .orWhere('sim.gol_darah', 'like', `%${search}%`)
-          .orWhere('sim.tempat_lahir', 'like', `%${search}%`)
-          .orWhere('sim.pekerjaan', 'like', `%${search}%`)
-          .orWhere('users.full_name', 'like', `%${search}%`);
+          .orWhere('sim.pendaftaran_id', 'like', `%${search}%`)
+          .orWhere('admin.full_name', 'like', `%${search}%`);
       });
-    }
-
-    // Filter enum untuk count query
-    if (jenis_sim) {
-      countQuery = countQuery.where('sim.jenis_sim', jenis_sim);
     }
 
     const [{ count }] = await countQuery.count('* as count');
@@ -182,8 +176,8 @@ export class SIMRepository {
    */
   async findById(simId: string): Promise<SIMResponse | null> {
     const sim = await db(this.tableName)
-      .leftJoin('users', 'sim.created_by', 'users.user_id')
-      .select('sim.*', 'users.full_name as creator_name')
+      .leftJoin('admin', 'sim.created_by', 'admin.admin_id')
+      .select('sim.*', 'admin.full_name as creator_name')
       .where('sim.sim_id', simId)
       .first();
 
@@ -191,11 +185,28 @@ export class SIMRepository {
   }
 
   /**
-   * Memperbarui data SIM.
+   * Mengambil SIM berdasarkan pendaftaran ID.
+   */
+  async findByPendaftaranId(
+    pendaftaranId: string
+  ): Promise<SIMResponse | null> {
+    const sim = await db(this.tableName)
+      .leftJoin('admin', 'sim.created_by', 'admin.admin_id')
+      .select('sim.*', 'admin.full_name as creator_name')
+      .where('sim.pendaftaran_id', pendaftaranId)
+      .first();
+
+    return sim ? toSIMResponse(sim) : null;
+  }
+
+  /**
+   * Memperbarui data SIM (hanya tanggal expired dan picture path).
    */
   async update(
     simId: string,
-    simData: Partial<Omit<SIM, 'sim_id' | 'created_by' | 'created_at'>>
+    simData: Partial<
+      Pick<SIM, 'tanggal_expired' | 'picture_path' | 'updated_at'>
+    >
   ): Promise<SIMResponse | null> {
     const updatedRows = await db(this.tableName)
       .where('sim_id', simId)
@@ -210,8 +221,8 @@ export class SIMRepository {
 
     // Ambil SIM yang sudah diupdate dengan creator_name
     const sim = await db(this.tableName)
-      .leftJoin('users', 'sim.created_by', 'users.user_id')
-      .select('sim.*', 'users.full_name as creator_name')
+      .leftJoin('admin', 'sim.created_by', 'admin.admin_id')
+      .select('sim.*', 'admin.full_name as creator_name')
       .where('sim.sim_id', simId)
       .first();
 
@@ -245,56 +256,13 @@ export class SIMRepository {
   }
 
   /**
-   * Mengecek apakah kombinasi NIK + jenis_sim sudah digunakan di tabel sim.
-   * Satu orang (NIK) tidak boleh memiliki 2 SIM dengan jenis yang sama.
+   * Mengecek apakah pendaftaran sudah punya SIM.
    */
-  async isNikJenisExists(
-    nik: string,
-    jenisSim: string,
-    excludeSimId?: string
-  ): Promise<boolean> {
-    let query = db(this.tableName)
-      .where('nik', nik)
-      .where('jenis_sim', jenisSim);
-
-    if (excludeSimId) {
-      query = query.whereNot('sim_id', excludeSimId);
-    }
-
-    const sim = await query.first();
-    return !!sim;
-  }
-
-  /**
-   * Mengecek apakah NIK sudah digunakan di tabel sim (untuk keperluan lain).
-   */
-  async isNikExists(nik: string, excludeSimId?: string): Promise<boolean> {
-    let query = db(this.tableName).where('nik', nik);
-
-    if (excludeSimId) {
-      query = query.whereNot('sim_id', excludeSimId);
-    }
-
-    const sim = await query.first();
-    return !!sim;
-  }
-
-  /**
-   * Mengambil nomor urut terakhir yang sudah digunakan untuk pattern tertentu.
-   * Pattern adalah 12 digit pertama dari nomor SIM (PPKKCCDDMMYY).
-   */
-  async getLastUsedSequenceNumber(basePattern: string): Promise<number | null> {
-    const result = await db(this.tableName)
-      .where('nomor_sim', 'like', `${basePattern}%`)
-      .orderBy('nomor_sim', 'desc')
+  async isPendaftaranHasSIM(pendaftaranId: string): Promise<boolean> {
+    const sim = await db(this.tableName)
+      .where('pendaftaran_id', pendaftaranId)
       .first();
 
-    if (!result) {
-      return null;
-    }
-
-    // Ambil 4 digit terakhir sebagai nomor urut
-    const sequenceNumber = parseInt(result.nomor_sim.substring(12, 16), 10);
-    return isNaN(sequenceNumber) ? null : sequenceNumber;
+    return !!sim;
   }
 }
