@@ -11,7 +11,7 @@ import {
   toUserResponse
 } from '../types/authUser.type';
 import { sendWhatsAppOTP } from '../utils/whatsapp';
-import { nanoid } from 'nanoid';
+import { randomInt } from 'crypto';
 import { AuthUserRepository } from '../repositories/authUser.repository';
 import { SessionRepository } from '../repositories/session.repository';
 import { OTPRepository } from '../repositories/otp.repository';
@@ -81,7 +81,7 @@ export class AuthUserService {
     await this.otpRepository.invalidateOTPs(phone_number);
 
     // Buat OTP (6 digit angka)
-    const otp = nanoid(6);
+    const otp = randomInt(0, 1_000_000).toString().padStart(6, '0');
 
     // Simpan OTP ke database dengan masa berlaku 5 menit
     await this.otpRepository.createOTP(phone_number, otp, 5);

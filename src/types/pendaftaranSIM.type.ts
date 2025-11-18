@@ -11,6 +11,7 @@ export interface CreatePendaftaranSIMRequest {
   satpas_id: string;
   jenis_sim: JenisSIM;
   tanggal_ujian: string; // Format: YYYY-MM-DD
+  nik?: string;
 }
 
 /**

@@ -16,15 +16,43 @@ import { PendaftaranSIMValidation } from '../validations/pendaftaranSIM.validati
 import { Validation } from '../validations/validatiom';
 import logger from '../utils/logger';
 import db from '../configs/database';
+import axios from 'axios';
+import { DataPemohonRepository } from '../repositories/dataPemohon.repository';
+import { AuthUserRepository } from '../repositories/authUser.repository';
+
+interface KTPApiData {
+  nik?: string;
+  nama_lengkap?: string;
+  tempat_lahir?: string;
+  tanggal_lahir?: string;
+  jenis_kelamin?: string;
+  golongan_darah?: string;
+  pekerjaan?: string;
+  rt?: string;
+  rw?: string;
+  kecamatan?: string;
+  kabupaten?: string;
+  provinsi?: string;
+  [key: string]: unknown;
+}
+
+interface KTPApiResponse {
+  success?: boolean;
+  data?: KTPApiData;
+}
 
 /**
  * Service untuk operasi bisnis terkait Pendaftaran SIM.
  */
 export class PendaftaranSIMService {
   private pendaftaranRepository: PendaftaranSIMRepository;
+  private dataPemohonRepository: DataPemohonRepository;
+  private authUserRepository: AuthUserRepository;
 
   constructor() {
     this.pendaftaranRepository = new PendaftaranSIMRepository();
+    this.dataPemohonRepository = new DataPemohonRepository();
+    this.authUserRepository = new AuthUserRepository();
   }
 
   /**
@@ -79,6 +107,51 @@ export class PendaftaranSIMService {
       );
     }
 
+    // Ambil NIK user atau fallback dari request body, lalu fetch data KTP (best effort)
+    let ktpData: KTPApiData | null = null;
+    try {
+      const user = await this.authUserRepository.findById(userId);
+      const nikForLookup = user?.nik ?? pendaftaranData.nik;
+      if (nikForLookup) {
+        const url = `https://ktp.chasouluix.biz.id/api/ktp/nik/${encodeURIComponent(
+          nikForLookup
+        )}`;
+        const resp = await axios.get<KTPApiResponse>(url);
+        if (resp.status === 200) {
+          const apiResponse = resp.data;
+          if (apiResponse?.success && apiResponse.data) {
+            ktpData = apiResponse.data;
+            logger.info({
+              url: url,
+              nik: nikForLookup,
+              message: 'KTP data fetched successfully'
+            });
+          } else {
+            logger.warn({
+              url: url,
+              nik: nikForLookup,
+              message: 'KTP API responded without data or success=false'
+            });
+          }
+        } else {
+          logger.warn({
+            url: url,
+            nik: nikForLookup,
+            status: resp.status,
+            message: 'KTP API responded with non-OK status'
+          });
+        }
+      } else {
+        logger.warn({
+          user_id: userId,
+          message:
+            'NIK not provided in user profile or request body. Skip KTP fetch'
+        });
+      }
+    } catch (error) {
+      logger.error({ error, message: 'Failed to fetch KTP data' });
+    }
+
     // Buat pendaftaran
     const pendaftaranToCreate: Omit<
       PendaftaranSIM,
@@ -95,6 +168,41 @@ export class PendaftaranSIMService {
     };
 
     const result = await this.pendaftaranRepository.create(pendaftaranToCreate);
+
+    // Simpan Data Pemohon dari KTP API jika tersedia
+    if (ktpData) {
+      try {
+        await this.dataPemohonRepository.upsertByPendaftaranId(
+          result.pendaftaran_id,
+          {
+            full_name: ktpData.nama_lengkap ?? '',
+            nik: ktpData.nik ?? '',
+            tempat_lahir: ktpData.tempat_lahir ?? '',
+            tanggal_lahir: ktpData.tanggal_lahir
+              ? new Date(ktpData.tanggal_lahir)
+              : new Date('1970-01-01'),
+            jenis_kelamin: ktpData.jenis_kelamin ?? '',
+            gol_darah: ktpData.golongan_darah ?? '-',
+            pekerjaan: ktpData.pekerjaan ?? '',
+            alamat_rt: ktpData.rt ?? '',
+            alamat_rw: ktpData.rw ?? '',
+            kecamatan: ktpData.kecamatan ?? '',
+            kabupaten: ktpData.kabupaten ?? '',
+            provinsi: ktpData.provinsi ?? ''
+          }
+        );
+        logger.info({
+          pendaftaran_id: result.pendaftaran_id,
+          message: 'Data Pemohon saved from KTP API'
+        });
+      } catch (error) {
+        logger.error({
+          pendaftaran_id: result.pendaftaran_id,
+          error,
+          message: 'Failed to save Data Pemohon from KTP API'
+        });
+      }
+    }
 
     logger.info({
       pendaftaran_id: result.pendaftaran_id,
