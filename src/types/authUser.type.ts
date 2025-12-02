@@ -78,6 +78,15 @@ export type UserLogoutResponse = {
   message: string;
 };
 
+export type UserVerifyNIKRequest = {
+  nik: string;
+};
+
+export type UserVerifyNIKResponse = {
+  message: string;
+  user: UserResponse;
+};
+
 /**
  * Mengubah instance model User menjadi objek response yang konsisten.
  *

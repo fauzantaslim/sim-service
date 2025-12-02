@@ -244,4 +244,34 @@ export class AuthUserController {
       next(error);
     }
   };
+  verifyNIK = async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { auth } = req;
+      if (auth?.role !== 'user') {
+        return res
+          .status(StatusCodes.FORBIDDEN)
+          .json({ message: 'Akses ditolak atau token tidak valid' });
+      }
+
+      const { nik } = AuthUserValidation.VERIFY_NIK.parse(req.body);
+      const result = await this.authUserService.verifyNIK(auth.user_id, nik);
+
+      res.status(StatusCodes.OK).json({
+        success: true,
+        status_code: StatusCodes.OK,
+        message: result.message,
+        data: result.user
+      });
+    } catch (error) {
+      const userId = req.auth?.role === 'user' ? req.auth.user_id : undefined;
+      logger.error({
+        endpoint: 'PUT /auth/users/verify-nik',
+        user_id: userId,
+        ip: req.ip,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        message: 'NIK verification request failed'
+      });
+      next(error);
+    }
+  };
 }

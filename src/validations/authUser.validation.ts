@@ -25,7 +25,12 @@ export class AuthUserValidation {
     refreshToken: z
       .string()
       .min(1, 'Refresh token harus diisi')
-      .max(1000, 'Refresh token maksimal 1000 karakter')
+      .max(1000, 'Refresh token maksimal 1000 karakter'),
+
+    nik: z
+      .string()
+      .length(16, 'NIK harus 16 digit')
+      .regex(/^[0-9]+$/, 'NIK hanya boleh berisi angka')
   };
 
   /**
@@ -74,5 +79,12 @@ export class AuthUserValidation {
    */
   static readonly REFRESH_TOKEN = z.object({
     refresh_token: this.baseSchemas.refreshToken
+  });
+
+  /**
+   * Validasi untuk verifikasi NIK user.
+   */
+  static readonly VERIFY_NIK = z.object({
+    nik: this.baseSchemas.nik
   });
 }

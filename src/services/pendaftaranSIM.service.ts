@@ -109,43 +109,45 @@ export class PendaftaranSIMService {
 
     // Ambil NIK user atau fallback dari request body, lalu fetch data KTP (best effort)
     let ktpData: KTPApiData | null = null;
+    const user = await this.authUserRepository.findById(userId);
+    if (!user?.nik) {
+      logger.warn({
+        user_id: userId,
+        message: 'Create Pendaftaran failed: NIK not verified'
+      });
+      throw new ResponseError(
+        StatusCodes.BAD_REQUEST,
+        'NIK belum terverifikasi. Silakan verifikasi NIK terlebih dahulu.'
+      );
+    }
     try {
-      const user = await this.authUserRepository.findById(userId);
-      const nikForLookup = user?.nik ?? pendaftaranData.nik;
-      if (nikForLookup) {
-        const url = `https://ktp.chasouluix.biz.id/api/ktp/nik/${encodeURIComponent(
-          nikForLookup
-        )}`;
-        const resp = await axios.get<KTPApiResponse>(url);
-        if (resp.status === 200) {
-          const apiResponse = resp.data;
-          if (apiResponse?.success && apiResponse.data) {
-            ktpData = apiResponse.data;
-            logger.info({
-              url: url,
-              nik: nikForLookup,
-              message: 'KTP data fetched successfully'
-            });
-          } else {
-            logger.warn({
-              url: url,
-              nik: nikForLookup,
-              message: 'KTP API responded without data or success=false'
-            });
-          }
+      const nikForLookup = user.nik;
+      const url = `https://ktp.chasouluix.biz.id/api/ktp/nik/${encodeURIComponent(
+        nikForLookup
+      )}`;
+      const resp = await axios.get<KTPApiResponse>(url);
+      if (resp.status === 200) {
+        const apiResponse = resp.data;
+        if (apiResponse?.success && apiResponse.data) {
+          ktpData = apiResponse.data;
+          logger.info({
+            url: url,
+            nik: nikForLookup,
+            message: 'KTP data fetched successfully'
+          });
         } else {
           logger.warn({
             url: url,
             nik: nikForLookup,
-            status: resp.status,
-            message: 'KTP API responded with non-OK status'
+            message: 'KTP API responded without data or success=false'
           });
         }
       } else {
         logger.warn({
-          user_id: userId,
-          message:
-            'NIK not provided in user profile or request body. Skip KTP fetch'
+          url: url,
+          nik: nikForLookup,
+          status: resp.status,
+          message: 'KTP API responded with non-OK status'
         });
       }
     } catch (error) {

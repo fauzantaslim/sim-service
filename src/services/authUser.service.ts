@@ -20,6 +20,7 @@ import { signAccessToken, signRefreshToken } from '../utils/jwt';
 import { ResponseError } from '../utils/responseError';
 import { StatusCodes } from 'http-status-codes';
 import logger from '../utils/logger';
+import axios from 'axios';
 
 /**
  * Service untuk menangani business logic autentikasi pengguna.
@@ -437,5 +438,57 @@ export class AuthUserService {
       throw new ResponseError(StatusCodes.UNAUTHORIZED, 'User tidak ditemukan');
     }
     return toUserResponse(user);
+  }
+
+  async verifyNIK(
+    userId: string,
+    nik: string
+  ): Promise<{ message: string; user: UserResponse }> {
+    const user = await this.authUserRepository.findById(userId);
+    if (!user) {
+      throw new ResponseError(StatusCodes.UNAUTHORIZED, 'User tidak ditemukan');
+    }
+
+    try {
+      const url = `https://ktp.chasouluix.biz.id/api/ktp/nik/${encodeURIComponent(
+        nik
+      )}`;
+      const resp = await axios.get(url);
+      if (resp.status !== 200 || !resp.data || resp.data.success !== true) {
+        logger.warn({
+          url,
+          nik,
+          status: resp.status,
+          message: 'NIK verification failed'
+        });
+        throw new ResponseError(
+          StatusCodes.UNPROCESSABLE_ENTITY,
+          'NIK tidak ditemukan atau tidak valid'
+        );
+      }
+
+      await this.authUserRepository.updateUser(userId, { nik });
+
+      const updatedUser = await this.authUserRepository.findById(userId);
+      if (!updatedUser) {
+        throw new ResponseError(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          'Gagal memperbarui NIK user'
+        );
+      }
+
+      logger.info({ user_id: userId, nik, message: 'NIK verified and saved' });
+      return {
+        message: 'NIK berhasil diverifikasi dan disimpan',
+        user: toUserResponse(updatedUser)
+      };
+    } catch (error) {
+      if (error instanceof ResponseError) throw error;
+      logger.error({ error, message: 'Error during NIK verification' });
+      throw new ResponseError(
+        StatusCodes.BAD_GATEWAY,
+        'Layanan verifikasi NIK tidak tersedia. Coba lagi nanti.'
+      );
+    }
   }
 }

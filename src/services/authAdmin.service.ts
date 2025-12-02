@@ -74,7 +74,7 @@ export class AuthAdminService {
     const hashedRefreshToken = await hashing(refreshToken);
 
     const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 2);
+    expiresAt.setMinutes(expiresAt.getMinutes() + 50);
 
     await this.sessionRepository.create({
       refresh_token: hashedRefreshToken,

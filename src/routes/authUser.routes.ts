@@ -15,5 +15,6 @@ router.post('/refresh', authUserController.refreshToken);
 // Endpoint yang memerlukan autentikasi
 router.post('/logout', deserializeToken, authUserController.logoutUser);
 router.get('/me', deserializeToken, authUserController.getMe);
+router.put('/verify-nik', deserializeToken, authUserController.verifyNIK);
 
 export default router;

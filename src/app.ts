@@ -29,7 +29,11 @@ const swaggerUiOptions = {
 app.set('trust proxy', 1);
 
 const corsOptions = {
-  origin: ['http://localhost:5173', 'http://localhost:8026'], // frontend React dev server dan Swagger UI
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:8026',
+    'http://localhost:3000'
+  ], // frontend React dev server dan Swagger UI
   methods: 'GET,PUT,PATCH,POST,DELETE',
   credentials: true,
   exposedHeaders: ['Content-Length', 'Content-Type'],
