@@ -9,6 +9,8 @@ import {
 } from '../types/sim.type';
 import { ResponseError } from '../utils/responseError';
 import { StatusCodes } from 'http-status-codes';
+import { isValidImageFile } from '../utils/imageUpload';
+import fileUpload from 'express-fileupload';
 
 /**
  * Controller untuk menangani request terkait SIM.
@@ -59,21 +61,18 @@ export class SIMController {
       }
 
       // Check if file uploaded
-      if (!req.file) {
+      if (!req.files || !req.files.picture) {
         throw new ResponseError(
           StatusCodes.BAD_REQUEST,
           'Foto SIM harus diupload'
         );
       }
 
+      // Get the file from express-fileupload
+      const file = req.files.picture as fileUpload.UploadedFile;
+
       // Validate file type
-      const allowedMimes = new Set([
-        'image/jpeg',
-        'image/jpg',
-        'image/png',
-        'image/webp'
-      ]);
-      if (!allowedMimes.has(req.file.mimetype)) {
+      if (!isValidImageFile(file)) {
         throw new ResponseError(
           StatusCodes.BAD_REQUEST,
           'Format file tidak valid. Hanya JPG, JPEG, PNG, dan WEBP yang diperbolehkan.'
@@ -88,7 +87,7 @@ export class SIMController {
 
       const newSIM = await this.simService.createSIM(
         request,
-        req.file.buffer,
+        file.data,
         req.auth.admin_id.toString()
       );
 
@@ -212,19 +211,18 @@ export class SIMController {
       }
 
       // Validate file type if file is uploaded
-      if (req.file) {
-        const allowedMimes = new Set([
-          'image/jpeg',
-          'image/jpg',
-          'image/png',
-          'image/webp'
-        ]);
-        if (!allowedMimes.has(req.file.mimetype)) {
+      let fileBuffer: Buffer | undefined;
+      if (req.files && req.files.picture) {
+        const file = req.files.picture as fileUpload.UploadedFile;
+
+        if (!isValidImageFile(file)) {
           throw new ResponseError(
             StatusCodes.BAD_REQUEST,
             'Format file tidak valid. Hanya JPG, JPEG, PNG, dan WEBP yang diperbolehkan.'
           );
         }
+
+        fileBuffer = file.data;
       }
 
       const request: UpdateSIMRequest = {
@@ -232,10 +230,7 @@ export class SIMController {
         tanggal_expired: req.body.tanggal_expired
       };
 
-      const updatedSIM = await this.simService.updateSIM(
-        request,
-        req.file?.buffer
-      );
+      const updatedSIM = await this.simService.updateSIM(request, fileBuffer);
 
       res.status(StatusCodes.OK).json({
         success: true,

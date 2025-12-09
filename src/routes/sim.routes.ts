@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { SIMController } from '../controllers/sim.controller';
-import { uploadSingle } from '../utils/imageUpload';
+import { fileUploadMiddleware } from '../utils/imageUpload';
 
 const router = Router();
 const simController = new SIMController();
@@ -14,10 +14,10 @@ const simController = new SIMController();
 /**
  * Routes untuk operasi CRUD SIM
  */
-router.post('/', uploadSingle, simController.createSIM);
+router.post('/', fileUploadMiddleware, simController.createSIM);
 router.get('/', simController.getSIMs);
 router.get('/:simId', simController.getSIMById);
-router.patch('/:simId', uploadSingle, simController.updateSIM);
+router.patch('/:simId', fileUploadMiddleware, simController.updateSIM);
 router.delete('/:simId', simController.deleteSIM);
 
 export default router;

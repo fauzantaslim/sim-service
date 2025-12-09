@@ -178,14 +178,19 @@ export class AuthUserController {
   };
 
   /**
-   * Refresh access token untuk user.
-   * POST /auth/user/refresh
+   * Refresh access token untuk user menggunakan refresh token dari HTTP-only cookie.
+   * POST /auth/users/refresh
    */
   refreshToken = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const refreshToken = req.cookies.refresh_token;
       if (!refreshToken) {
-        throw new Error('Refresh token not found');
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          success: false,
+          status_code: StatusCodes.BAD_REQUEST,
+          message: 'Refresh token tidak ditemukan',
+          data: null
+        });
       }
 
       const result = await this.authUserService.refreshToken(

@@ -1,24 +1,17 @@
-import multer from 'multer';
+import fileUpload from 'express-fileupload';
 import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
 import { nanoid } from 'nanoid';
 
 /**
- * Konfigurasi multer untuk upload file
- * Multer v3 tidak memerlukan storage configuration untuk memory storage (default behavior)
+ * Konfigurasi express-fileupload middleware
  */
-export const upload = multer({
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB in bytes
-  }
-  // Note: fileFilter tidak tersedia di v3, validasi dilakukan di controller/service
+export const fileUploadMiddleware = fileUpload({
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  abortOnLimit: true,
+  responseOnLimit: 'File size limit exceeded. Maximum file size is 5MB.'
 });
-
-/**
- * Middleware untuk upload single file dengan field name 'picture'
- */
-export const uploadSingle = upload.single('picture');
 
 /**
  * Process dan simpan image dengan sharp
@@ -66,4 +59,17 @@ export async function deleteImage(picturePath: string): Promise<void> {
     console.error('Error deleting image:', error);
     // Don't throw error, just log it
   }
+}
+
+/**
+ * Validate if the file is an image
+ */
+export function isValidImageFile(file: fileUpload.UploadedFile): boolean {
+  const allowedMimes = new Set([
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp'
+  ]);
+  return allowedMimes.has(file.mimetype);
 }

@@ -57,6 +57,10 @@ export class AuthAdminController {
     }
   };
 
+  /**
+   * Refresh access token untuk admin menggunakan refresh token dari HTTP-only cookie.
+   * POST /auth/admin/refresh
+   */
   refreshTokenAdmin = async (
     req: Request,
     res: Response,

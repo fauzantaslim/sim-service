@@ -228,8 +228,14 @@
               {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrfToken}}",
+                "type": "text"
               }
             ],
+
             "body": {
               "mode": "raw",
               "raw": "{\n  \"nik\": \"3201010101010001\"\n}"
@@ -287,7 +293,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "users", "refresh"]
             },
-            "description": "Refresh access token menggunakan refresh token dari HTTP-only cookie"
+            "description": "Refresh access token menggunakan refresh token dari HTTP-only cookie. Cookie akan dikirim secara otomatis oleh browser."
           },
           "response": []
         },
@@ -391,7 +397,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "auth", "admin", "refresh"]
             },
-            "description": "Refresh access token admin"
+            "description": "Refresh access token admin menggunakan refresh token dari HTTP-only cookie. Cookie akan dikirim secara otomatis oleh browser."
           },
           "response": []
         },

@@ -1,4 +1,5 @@
 import { SIM } from '../models/sim.model';
+import { DataPemohon } from '../models/dataPemohon.model';
 import moment from 'moment-timezone';
 
 /**
@@ -35,6 +36,19 @@ export type DeleteSIMRequest = {
   sim_id: string;
 };
 
+type DataPemohonResponse = Omit<
+  DataPemohon,
+  | 'pemohon_id'
+  | 'pendaftaran_id'
+  | 'tanggal_lahir'
+  | 'created_at'
+  | 'updated_at'
+> & {
+  tanggal_lahir: string;
+  created_at: string;
+  updated_at: string;
+};
+
 /**
  * Struktur response umum untuk data SIM.
  */
@@ -47,6 +61,12 @@ export type SIMResponse = Omit<
   created_at: string;
   updated_at: string;
   creator_name?: string;
+  data_pemohon?: DataPemohonResponse;
+};
+
+type SIMWithRelations = SIM & {
+  creator_name?: string;
+  data_pemohon?: DataPemohon;
 };
 
 /**
@@ -55,10 +75,8 @@ export type SIMResponse = Omit<
  * @param {SIM} sim - Objek SIM dari database.
  * @returns {SIMResponse} - Representasi SIM yang siap dikirim sebagai response.
  */
-export function toSIMResponse(
-  sim: SIM & { creator_name?: string }
-): SIMResponse {
-  return {
+export function toSIMResponse(sim: SIMWithRelations): SIMResponse {
+  const response: Partial<SIMResponse> = {
     sim_id: sim.sim_id,
     nomor_sim: sim.nomor_sim,
     pendaftaran_id: sim.pendaftaran_id,
@@ -82,4 +100,35 @@ export function toSIMResponse(
       .format('DD-MM-YYYY HH:mm:ss'),
     creator_name: sim.creator_name
   };
+
+  // Add applicant data if available
+  if (sim.data_pemohon) {
+    response.data_pemohon = {
+      full_name: sim.data_pemohon.full_name,
+      nik: sim.data_pemohon.nik,
+      tempat_lahir: sim.data_pemohon.tempat_lahir,
+      tanggal_lahir: moment(sim.data_pemohon.tanggal_lahir)
+        .utc()
+        .tz('Asia/Jakarta')
+        .format('DD-MM-YYYY'),
+      jenis_kelamin: sim.data_pemohon.jenis_kelamin,
+      gol_darah: sim.data_pemohon.gol_darah,
+      pekerjaan: sim.data_pemohon.pekerjaan,
+      alamat_rt: sim.data_pemohon.alamat_rt,
+      alamat_rw: sim.data_pemohon.alamat_rw,
+      kecamatan: sim.data_pemohon.kecamatan,
+      kabupaten: sim.data_pemohon.kabupaten,
+      provinsi: sim.data_pemohon.provinsi,
+      created_at: moment(sim.data_pemohon.created_at)
+        .utc()
+        .tz('Asia/Jakarta')
+        .format('DD-MM-YYYY HH:mm:ss'),
+      updated_at: moment(sim.data_pemohon.updated_at)
+        .utc()
+        .tz('Asia/Jakarta')
+        .format('DD-MM-YYYY HH:mm:ss')
+    };
+  }
+
+  return response as SIMResponse;
 }
