@@ -61,21 +61,39 @@ export type SIMResponse = Omit<
   created_at: string;
   updated_at: string;
   creator_name?: string;
+  jenis_sim?: string;
   data_pemohon?: DataPemohonResponse;
 };
 
-type SIMWithRelations = SIM & {
+// Extended type for database query results
+type SIMWithJoinedData = SIM & {
   creator_name?: string;
-  data_pemohon?: DataPemohon;
+  jenis_sim?: string;
+  pemohon_id?: string;
+  pemohon_pendaftaran_id?: string;
+  full_name?: string;
+  nik?: string;
+  tempat_lahir?: string;
+  tanggal_lahir?: Date;
+  jenis_kelamin?: string;
+  gol_darah?: string;
+  pekerjaan?: string;
+  alamat_rt?: string;
+  alamat_rw?: string;
+  kecamatan?: string;
+  kabupaten?: string;
+  provinsi?: string;
+  pemohon_created_at?: Date;
+  pemohon_updated_at?: Date;
 };
 
 /**
  * Mengubah instance model SIM menjadi objek response yang konsisten.
  *
- * @param {SIM} sim - Objek SIM dari database.
+ * @param {SIMWithJoinedData} sim - Objek SIM dari database dengan data gabungan.
  * @returns {SIMResponse} - Representasi SIM yang siap dikirim sebagai response.
  */
-export function toSIMResponse(sim: SIMWithRelations): SIMResponse {
+export function toSIMResponse(sim: SIMWithJoinedData): SIMResponse {
   const response: Partial<SIMResponse> = {
     sim_id: sim.sim_id,
     nomor_sim: sim.nomor_sim,
@@ -98,32 +116,33 @@ export function toSIMResponse(sim: SIMWithRelations): SIMResponse {
       .utc()
       .tz('Asia/Jakarta')
       .format('DD-MM-YYYY HH:mm:ss'),
-    creator_name: sim.creator_name
+    creator_name: sim.creator_name,
+    jenis_sim: sim.jenis_sim
   };
 
   // Add applicant data if available
-  if (sim.data_pemohon) {
+  if (sim.pemohon_id) {
     response.data_pemohon = {
-      full_name: sim.data_pemohon.full_name,
-      nik: sim.data_pemohon.nik,
-      tempat_lahir: sim.data_pemohon.tempat_lahir,
-      tanggal_lahir: moment(sim.data_pemohon.tanggal_lahir)
+      full_name: sim.full_name || '',
+      nik: sim.nik || '',
+      tempat_lahir: sim.tempat_lahir || '',
+      tanggal_lahir: moment(sim.tanggal_lahir)
         .utc()
         .tz('Asia/Jakarta')
         .format('DD-MM-YYYY'),
-      jenis_kelamin: sim.data_pemohon.jenis_kelamin,
-      gol_darah: sim.data_pemohon.gol_darah,
-      pekerjaan: sim.data_pemohon.pekerjaan,
-      alamat_rt: sim.data_pemohon.alamat_rt,
-      alamat_rw: sim.data_pemohon.alamat_rw,
-      kecamatan: sim.data_pemohon.kecamatan,
-      kabupaten: sim.data_pemohon.kabupaten,
-      provinsi: sim.data_pemohon.provinsi,
-      created_at: moment(sim.data_pemohon.created_at)
+      jenis_kelamin: sim.jenis_kelamin || '',
+      gol_darah: sim.gol_darah || '',
+      pekerjaan: sim.pekerjaan || '',
+      alamat_rt: sim.alamat_rt || '',
+      alamat_rw: sim.alamat_rw || '',
+      kecamatan: sim.kecamatan || '',
+      kabupaten: sim.kabupaten || '',
+      provinsi: sim.provinsi || '',
+      created_at: moment(sim.pemohon_created_at)
         .utc()
         .tz('Asia/Jakarta')
         .format('DD-MM-YYYY HH:mm:ss'),
-      updated_at: moment(sim.data_pemohon.updated_at)
+      updated_at: moment(sim.pemohon_updated_at)
         .utc()
         .tz('Asia/Jakarta')
         .format('DD-MM-YYYY HH:mm:ss')

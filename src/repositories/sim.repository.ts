@@ -91,10 +91,40 @@ export class SIMRepository {
       updated_at: db.fn.now()
     });
 
-    // Ambil SIM yang baru dibuat dengan creator_name
+    // Ambil SIM yang baru dibuat dengan creator_name dan data_pemohon
     const sim = await db(this.tableName)
       .leftJoin('admin', 'sim.created_by', 'admin.admin_id')
-      .select('sim.*', 'admin.full_name as creator_name')
+      .leftJoin(
+        'pendaftaran_sim',
+        'sim.pendaftaran_id',
+        'pendaftaran_sim.pendaftaran_id'
+      )
+      .leftJoin(
+        'data_pemohon',
+        'pendaftaran_sim.pendaftaran_id',
+        'data_pemohon.pendaftaran_id'
+      )
+      .select(
+        'sim.*',
+        'admin.full_name as creator_name',
+        'pendaftaran_sim.jenis_sim as jenis_sim',
+        'data_pemohon.pemohon_id',
+        'data_pemohon.pendaftaran_id as pemohon_pendaftaran_id',
+        'data_pemohon.full_name as full_name',
+        'data_pemohon.nik as nik',
+        'data_pemohon.tempat_lahir as tempat_lahir',
+        'data_pemohon.tanggal_lahir as tanggal_lahir',
+        'data_pemohon.jenis_kelamin as jenis_kelamin',
+        'data_pemohon.gol_darah as gol_darah',
+        'data_pemohon.pekerjaan as pekerjaan',
+        'data_pemohon.alamat_rt as alamat_rt',
+        'data_pemohon.alamat_rw as alamat_rw',
+        'data_pemohon.kecamatan as kecamatan',
+        'data_pemohon.kabupaten as kabupaten',
+        'data_pemohon.provinsi as provinsi',
+        'data_pemohon.created_at as pemohon_created_at',
+        'data_pemohon.updated_at as pemohon_updated_at'
+      )
       .where('sim.sim_id', simId)
       .first();
 
@@ -120,17 +150,49 @@ export class SIMRepository {
     } = params;
     const offset = (page - 1) * limit;
 
-    // Query builder untuk data dengan JOIN ke admin untuk creator_name
+    // Query builder untuk data dengan JOIN ke admin untuk creator_name dan data_pemohon
     let query = db(this.tableName)
       .leftJoin('admin', 'sim.created_by', 'admin.admin_id')
-      .select('sim.*', 'admin.full_name as creator_name');
+      .leftJoin(
+        'pendaftaran_sim',
+        'sim.pendaftaran_id',
+        'pendaftaran_sim.pendaftaran_id'
+      )
+      .leftJoin(
+        'data_pemohon',
+        'pendaftaran_sim.pendaftaran_id',
+        'data_pemohon.pendaftaran_id'
+      )
+      .select(
+        'sim.*',
+        'admin.full_name as creator_name',
+        'pendaftaran_sim.jenis_sim as jenis_sim',
+        'data_pemohon.pemohon_id',
+        'data_pemohon.pendaftaran_id as pemohon_pendaftaran_id',
+        'data_pemohon.full_name as full_name',
+        'data_pemohon.nik as nik',
+        'data_pemohon.tempat_lahir as tempat_lahir',
+        'data_pemohon.tanggal_lahir as tanggal_lahir',
+        'data_pemohon.jenis_kelamin as jenis_kelamin',
+        'data_pemohon.gol_darah as gol_darah',
+        'data_pemohon.pekerjaan as pekerjaan',
+        'data_pemohon.alamat_rt as alamat_rt',
+        'data_pemohon.alamat_rw as alamat_rw',
+        'data_pemohon.kecamatan as kecamatan',
+        'data_pemohon.kabupaten as kabupaten',
+        'data_pemohon.provinsi as provinsi',
+        'data_pemohon.created_at as pemohon_created_at',
+        'data_pemohon.updated_at as pemohon_updated_at'
+      );
 
     // Filter search jika ada
     if (search) {
       query = query.where(function () {
         this.where('sim.nomor_sim', 'like', `%${search}%`)
           .orWhere('sim.pendaftaran_id', 'like', `%${search}%`)
-          .orWhere('admin.full_name', 'like', `%${search}%`);
+          .orWhere('admin.full_name', 'like', `%${search}%`)
+          .orWhere('data_pemohon.full_name', 'like', `%${search}%`)
+          .orWhere('data_pemohon.nik', 'like', `%${search}%`);
       });
     }
 
@@ -141,16 +203,26 @@ export class SIMRepository {
     const data = await query.limit(limit).offset(offset);
 
     // Query untuk total count
-    let countQuery = db(this.tableName).leftJoin(
-      'admin',
-      'sim.created_by',
-      'admin.admin_id'
-    );
+    let countQuery = db(this.tableName)
+      .leftJoin('admin', 'sim.created_by', 'admin.admin_id')
+      .leftJoin(
+        'pendaftaran_sim',
+        'sim.pendaftaran_id',
+        'pendaftaran_sim.pendaftaran_id'
+      )
+      .leftJoin(
+        'data_pemohon',
+        'pendaftaran_sim.pendaftaran_id',
+        'data_pemohon.pendaftaran_id'
+      );
+
     if (search) {
       countQuery = countQuery.where(function () {
         this.where('sim.nomor_sim', 'like', `%${search}%`)
           .orWhere('sim.pendaftaran_id', 'like', `%${search}%`)
-          .orWhere('admin.full_name', 'like', `%${search}%`);
+          .orWhere('admin.full_name', 'like', `%${search}%`)
+          .orWhere('data_pemohon.full_name', 'like', `%${search}%`)
+          .orWhere('data_pemohon.nik', 'like', `%${search}%`);
       });
     }
 
@@ -177,7 +249,37 @@ export class SIMRepository {
   async findById(simId: string): Promise<SIMResponse | null> {
     const sim = await db(this.tableName)
       .leftJoin('admin', 'sim.created_by', 'admin.admin_id')
-      .select('sim.*', 'admin.full_name as creator_name')
+      .leftJoin(
+        'pendaftaran_sim',
+        'sim.pendaftaran_id',
+        'pendaftaran_sim.pendaftaran_id'
+      )
+      .leftJoin(
+        'data_pemohon',
+        'pendaftaran_sim.pendaftaran_id',
+        'data_pemohon.pendaftaran_id'
+      )
+      .select(
+        'sim.*',
+        'admin.full_name as creator_name',
+        'pendaftaran_sim.jenis_sim as jenis_sim',
+        'data_pemohon.pemohon_id',
+        'data_pemohon.pendaftaran_id as pemohon_pendaftaran_id',
+        'data_pemohon.full_name as full_name',
+        'data_pemohon.nik as nik',
+        'data_pemohon.tempat_lahir as tempat_lahir',
+        'data_pemohon.tanggal_lahir as tanggal_lahir',
+        'data_pemohon.jenis_kelamin as jenis_kelamin',
+        'data_pemohon.gol_darah as gol_darah',
+        'data_pemohon.pekerjaan as pekerjaan',
+        'data_pemohon.alamat_rt as alamat_rt',
+        'data_pemohon.alamat_rw as alamat_rw',
+        'data_pemohon.kecamatan as kecamatan',
+        'data_pemohon.kabupaten as kabupaten',
+        'data_pemohon.provinsi as provinsi',
+        'data_pemohon.created_at as pemohon_created_at',
+        'data_pemohon.updated_at as pemohon_updated_at'
+      )
       .where('sim.sim_id', simId)
       .first();
 
@@ -192,7 +294,37 @@ export class SIMRepository {
   ): Promise<SIMResponse | null> {
     const sim = await db(this.tableName)
       .leftJoin('admin', 'sim.created_by', 'admin.admin_id')
-      .select('sim.*', 'admin.full_name as creator_name')
+      .leftJoin(
+        'pendaftaran_sim',
+        'sim.pendaftaran_id',
+        'pendaftaran_sim.pendaftaran_id'
+      )
+      .leftJoin(
+        'data_pemohon',
+        'pendaftaran_sim.pendaftaran_id',
+        'data_pemohon.pendaftaran_id'
+      )
+      .select(
+        'sim.*',
+        'admin.full_name as creator_name',
+        'pendaftaran_sim.jenis_sim as jenis_sim',
+        'data_pemohon.pemohon_id',
+        'data_pemohon.pendaftaran_id as pemohon_pendaftaran_id',
+        'data_pemohon.full_name as full_name',
+        'data_pemohon.nik as nik',
+        'data_pemohon.tempat_lahir as tempat_lahir',
+        'data_pemohon.tanggal_lahir as tanggal_lahir',
+        'data_pemohon.jenis_kelamin as jenis_kelamin',
+        'data_pemohon.gol_darah as gol_darah',
+        'data_pemohon.pekerjaan as pekerjaan',
+        'data_pemohon.alamat_rt as alamat_rt',
+        'data_pemohon.alamat_rw as alamat_rw',
+        'data_pemohon.kecamatan as kecamatan',
+        'data_pemohon.kabupaten as kabupaten',
+        'data_pemohon.provinsi as provinsi',
+        'data_pemohon.created_at as pemohon_created_at',
+        'data_pemohon.updated_at as pemohon_updated_at'
+      )
       .where('sim.pendaftaran_id', pendaftaranId)
       .first();
 
@@ -219,10 +351,40 @@ export class SIMRepository {
       return null;
     }
 
-    // Ambil SIM yang sudah diupdate dengan creator_name
+    // Ambil SIM yang sudah diupdate dengan creator_name dan data_pemohon
     const sim = await db(this.tableName)
       .leftJoin('admin', 'sim.created_by', 'admin.admin_id')
-      .select('sim.*', 'admin.full_name as creator_name')
+      .leftJoin(
+        'pendaftaran_sim',
+        'sim.pendaftaran_id',
+        'pendaftaran_sim.pendaftaran_id'
+      )
+      .leftJoin(
+        'data_pemohon',
+        'pendaftaran_sim.pendaftaran_id',
+        'data_pemohon.pendaftaran_id'
+      )
+      .select(
+        'sim.*',
+        'admin.full_name as creator_name',
+        'pendaftaran_sim.jenis_sim as jenis_sim',
+        'data_pemohon.pemohon_id',
+        'data_pemohon.pendaftaran_id as pemohon_pendaftaran_id',
+        'data_pemohon.full_name as full_name',
+        'data_pemohon.nik as nik',
+        'data_pemohon.tempat_lahir as tempat_lahir',
+        'data_pemohon.tanggal_lahir as tanggal_lahir',
+        'data_pemohon.jenis_kelamin as jenis_kelamin',
+        'data_pemohon.gol_darah as gol_darah',
+        'data_pemohon.pekerjaan as pekerjaan',
+        'data_pemohon.alamat_rt as alamat_rt',
+        'data_pemohon.alamat_rw as alamat_rw',
+        'data_pemohon.kecamatan as kecamatan',
+        'data_pemohon.kabupaten as kabupaten',
+        'data_pemohon.provinsi as provinsi',
+        'data_pemohon.created_at as pemohon_created_at',
+        'data_pemohon.updated_at as pemohon_updated_at'
+      )
       .where('sim.sim_id', simId)
       .first();
 
