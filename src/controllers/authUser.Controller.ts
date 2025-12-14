@@ -29,8 +29,7 @@ export class AuthUserController {
         status_code: StatusCodes.OK,
         message: result.message,
         data: {
-          has_pin: result.has_pin,
-          requires_otp: result.requires_otp
+          has_pin: result.has_pin
         }
       });
     } catch (error) {

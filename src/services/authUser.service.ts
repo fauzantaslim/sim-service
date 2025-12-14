@@ -41,7 +41,7 @@ export class AuthUserService {
    */
   async registerUser(
     request: UserRegisterRequest
-  ): Promise<{ message: string; has_pin: boolean; requires_otp: boolean }> {
+  ): Promise<{ message: string; has_pin: boolean }> {
     const { phone_number } = request;
 
     const existingUser =
@@ -54,8 +54,7 @@ export class AuthUserService {
       );
       return {
         message: 'Nomor telepon sudah terdaftar. Silakan masukkan PIN Anda.',
-        has_pin: true,
-        requires_otp: false
+        has_pin: true
       };
     }
 
@@ -94,13 +93,12 @@ export class AuthUserService {
 
     return {
       message: 'OTP berhasil dikirim ke nomor WhatsApp Anda',
-      has_pin: false,
-      requires_otp: true
+      has_pin: false
     };
   }
 
   /**
-   * Verifikasi OTP saja (tidak set PIN).
+   * Verifikasi OTP saja (tidak set PIN).remove requires_otp in response
    */
   async verifyOTP(
     request: UserVerifyOTPRequest
