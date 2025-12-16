@@ -10,6 +10,7 @@ import { connectToWhatsApp } from './utils/whatsapp';
 import { errorMiddleware } from './middlewares/error.middleware';
 import { doubleCsrf } from 'csrf-csrf';
 import logger from './utils/logger';
+import path from 'path';
 
 const app: Application = express();
 const theme = new SwaggerTheme();
@@ -42,6 +43,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
+
+// Serve static files from the 'sim' directory
+app.use('/sim', express.static(path.join(__dirname, '..', 'sim')));
 
 // Logging middleware untuk mencatat endpoint yang dihit
 app.use((req: Request, res: Response, next) => {

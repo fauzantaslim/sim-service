@@ -55,10 +55,10 @@ export class SIMService {
       );
     }
 
-    if (pendaftaran.status !== 'disetujui') {
+    if (pendaftaran.status !== 'selesai') {
       throw new ResponseError(
         StatusCodes.BAD_REQUEST,
-        `Pendaftaran harus berstatus disetujui. Status saat ini: ${pendaftaran.status}`
+        `Pendaftaran harus berstatus selesai. Status saat ini: ${pendaftaran.status}`
       );
     }
 

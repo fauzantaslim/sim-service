@@ -3,7 +3,10 @@ import {
   PendaftaranSIM,
   StatusPendaftaran
 } from '../models/pendaftaranSIM.model';
-import { PaginationParams, PaginationResponse } from '../types/pagination.type';
+import {
+  PendaftaranSIMPaginationParams,
+  PaginationResponse
+} from '../types/pagination.type';
 import {
   PendaftaranSIMResponse,
   CreatePendaftaranSIMRequest,
@@ -220,7 +223,7 @@ export class PendaftaranSIMService {
    * Mengambil semua pendaftaran dengan pagination (Admin only).
    */
   async getAllPendaftaran(
-    params: PaginationParams
+    params: PendaftaranSIMPaginationParams
   ): Promise<PaginationResponse<PendaftaranSIMResponse>> {
     logger.info({
       page: params.page,
@@ -261,7 +264,7 @@ export class PendaftaranSIMService {
    */
   async getPendaftaranByUserId(
     userId: string,
-    params: PaginationParams
+    params: PendaftaranSIMPaginationParams
   ): Promise<PaginationResponse<PendaftaranSIMResponse>> {
     logger.info({
       user_id: userId,

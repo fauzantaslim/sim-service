@@ -73,8 +73,7 @@ export class AuthAdminService {
 
     const hashedRefreshToken = await hashing(refreshToken);
 
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 50);
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 jam
 
     await this.sessionRepository.create({
       refresh_token: hashedRefreshToken,
@@ -100,7 +99,7 @@ export class AuthAdminService {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 5 * 60 * 1000,
+        maxAge: 60 * 60 * 1000, // ✅ 60 menit
         path: '/'
       });
     }

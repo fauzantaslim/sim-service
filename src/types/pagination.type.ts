@@ -27,6 +27,13 @@ export type SIMPaginationParams = PaginationParams & {
 };
 
 /**
+ * Parameter paginasi khusus untuk Pendaftaran SIM dengan filter status.
+ */
+export type PendaftaranSIMPaginationParams = PaginationParams & {
+  status_pendaftaran?: string;
+};
+
+/**
  * Response paginasi umum untuk list data.
  */
 export type PaginationResponse<T> = {

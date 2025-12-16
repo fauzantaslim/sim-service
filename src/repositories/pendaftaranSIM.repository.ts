@@ -4,7 +4,10 @@ import {
   PendaftaranSIM,
   StatusPendaftaran
 } from '../models/pendaftaranSIM.model';
-import { PaginationParams, PaginationResponse } from '../types/pagination.type';
+import {
+  PendaftaranSIMPaginationParams,
+  PaginationResponse
+} from '../types/pagination.type';
 import {
   PendaftaranSIMResponse,
   toPendaftaranSIMResponse
@@ -66,18 +69,24 @@ export class PendaftaranSIMRepository {
    * Mengambil semua pendaftaran dengan pagination (Admin only).
    */
   async findAll(
-    params: PaginationParams
+    params: PendaftaranSIMPaginationParams
   ): Promise<PaginationResponse<PendaftaranSIMResponse>> {
     const {
       page,
       limit,
       search,
       sort_by = 'created_at',
-      sort_order = 'desc'
+      sort_order = 'desc',
+      status_pendaftaran
     } = params;
     const offset = (page - 1) * limit;
 
     let query = db(this.tableName).select('*');
+
+    // Filter by status if provided
+    if (status_pendaftaran) {
+      query = query.where('status', status_pendaftaran);
+    }
 
     // Search by kode_pendaftaran or status
     if (search) {
@@ -108,6 +117,12 @@ export class PendaftaranSIMRepository {
 
     // Get total count
     let countQuery = db(this.tableName);
+
+    // Apply same filters for count query
+    if (status_pendaftaran) {
+      countQuery = countQuery.where('status', status_pendaftaran);
+    }
+
     if (search) {
       countQuery = countQuery.where(function () {
         this.where('kode_pendaftaran', 'like', `%${search}%`).orWhere(
@@ -140,18 +155,24 @@ export class PendaftaranSIMRepository {
    */
   async findByUserId(
     user_id: string,
-    params: PaginationParams
+    params: PendaftaranSIMPaginationParams
   ): Promise<PaginationResponse<PendaftaranSIMResponse>> {
     const {
       page,
       limit,
       search,
       sort_by = 'created_at',
-      sort_order = 'desc'
+      sort_order = 'desc',
+      status_pendaftaran
     } = params;
     const offset = (page - 1) * limit;
 
     let query = db(this.tableName).select('*').where('user_id', user_id);
+
+    // Filter by status if provided
+    if (status_pendaftaran) {
+      query = query.where('status', status_pendaftaran);
+    }
 
     // Search by kode_pendaftaran or status
     if (search) {
@@ -182,6 +203,12 @@ export class PendaftaranSIMRepository {
 
     // Get total count
     let countQuery = db(this.tableName).where('user_id', user_id);
+
+    // Apply same filters for count query
+    if (status_pendaftaran) {
+      countQuery = countQuery.where('status', status_pendaftaran);
+    }
+
     if (search) {
       countQuery = countQuery.where(function () {
         this.where('kode_pendaftaran', 'like', `%${search}%`).orWhere(

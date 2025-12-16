@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { PendaftaranSIMService } from '../services/pendaftaranSIM.service';
 import { AuthRequest } from '../types/request.type';
-import { PaginationParams } from '../types/pagination.type';
+import { PendaftaranSIMPaginationParams } from '../types/pagination.type';
 import {
   CreatePendaftaranSIMRequest,
   UpdateStatusPendaftaranRequest,
@@ -106,12 +106,13 @@ export class PendaftaranSIMController {
       const sortBy = req.query.sort_by as string;
       const validSortBy = this.validateSortField(sortBy);
 
-      const paginationParams: PaginationParams = {
+      const paginationParams: PendaftaranSIMPaginationParams = {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
         search: req.query.search as string,
         sort_by: validSortBy,
-        sort_order: (req.query.sort_order as 'asc' | 'desc') || 'desc'
+        sort_order: (req.query.sort_order as 'asc' | 'desc') || 'desc',
+        status_pendaftaran: req.query.status_pendaftaran as string
       };
 
       const result =
@@ -157,12 +158,13 @@ export class PendaftaranSIMController {
       const sortBy = req.query.sort_by as string;
       const validSortBy = this.validateSortField(sortBy);
 
-      const paginationParams: PaginationParams = {
+      const paginationParams: PendaftaranSIMPaginationParams = {
         page: parseInt(req.query.page as string) || 1,
         limit: parseInt(req.query.limit as string) || 10,
         search: req.query.search as string,
         sort_by: validSortBy,
-        sort_order: (req.query.sort_order as 'asc' | 'desc') || 'desc'
+        sort_order: (req.query.sort_order as 'asc' | 'desc') || 'desc',
+        status_pendaftaran: req.query.status_pendaftaran as string
       };
 
       const result = await this.pendaftaranService.getPendaftaranByUserId(
