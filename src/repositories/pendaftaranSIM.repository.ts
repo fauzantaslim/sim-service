@@ -62,7 +62,8 @@ export class PendaftaranSIMRepository {
       message: 'Pendaftaran SIM created in database'
     });
 
-    return toPendaftaranSIMResponse(newPendaftaran);
+    // Fetch the created pendaftaran with satpas_name
+    return this.findById(pendaftaran_id) as Promise<PendaftaranSIMResponse>;
   }
 
   /**
@@ -81,19 +82,21 @@ export class PendaftaranSIMRepository {
     } = params;
     const offset = (page - 1) * limit;
 
-    let query = db(this.tableName).select('*');
+    let query = db(this.tableName)
+      .select(`${this.tableName}.*`, 'satpas.name as satpas_name')
+      .leftJoin('satpas', `${this.tableName}.satpas_id`, 'satpas.satpas_id');
 
     // Filter by status if provided
     if (status_pendaftaran) {
-      query = query.where('status', status_pendaftaran);
+      query = query.where(`${this.tableName}.status`, status_pendaftaran);
     }
 
     // Search by kode_pendaftaran or status
     if (search) {
       query = query.where((builder) => {
         builder
-          .where('kode_pendaftaran', 'like', `%${search}%`)
-          .orWhere('status', 'like', `%${search}%`);
+          .where(`${this.tableName}.kode_pendaftaran`, 'like', `%${search}%`)
+          .orWhere(`${this.tableName}.status`, 'like', `%${search}%`);
       });
     }
 
@@ -108,12 +111,11 @@ export class PendaftaranSIMRepository {
     const sortField = allowedSortFields.includes(sort_by)
       ? sort_by
       : 'created_at';
-    query = query.orderBy(sortField, sort_order);
+    query = query.orderBy(`${this.tableName}.${sortField}`, sort_order);
 
     // Get paginated data
-    const pendaftaranList: PendaftaranSIM[] = await query
-      .limit(limit)
-      .offset(offset);
+    const pendaftaranList: Array<PendaftaranSIM & { satpas_name: string }> =
+      await query.limit(limit).offset(offset);
 
     // Get total count
     let countQuery = db(this.tableName);
@@ -167,19 +169,22 @@ export class PendaftaranSIMRepository {
     } = params;
     const offset = (page - 1) * limit;
 
-    let query = db(this.tableName).select('*').where('user_id', user_id);
+    let query = db(this.tableName)
+      .select(`${this.tableName}.*`, 'satpas.name as satpas_name')
+      .leftJoin('satpas', `${this.tableName}.satpas_id`, 'satpas.satpas_id')
+      .where(`${this.tableName}.user_id`, user_id);
 
     // Filter by status if provided
     if (status_pendaftaran) {
-      query = query.where('status', status_pendaftaran);
+      query = query.where(`${this.tableName}.status`, status_pendaftaran);
     }
 
     // Search by kode_pendaftaran or status
     if (search) {
       query = query.where((builder) => {
         builder
-          .where('kode_pendaftaran', 'like', `%${search}%`)
-          .orWhere('status', 'like', `%${search}%`);
+          .where(`${this.tableName}.kode_pendaftaran`, 'like', `%${search}%`)
+          .orWhere(`${this.tableName}.status`, 'like', `%${search}%`);
       });
     }
 
@@ -194,12 +199,11 @@ export class PendaftaranSIMRepository {
     const sortField = allowedSortFields.includes(sort_by)
       ? sort_by
       : 'created_at';
-    query = query.orderBy(sortField, sort_order);
+    query = query.orderBy(`${this.tableName}.${sortField}`, sort_order);
 
     // Get paginated data
-    const pendaftaranList: PendaftaranSIM[] = await query
-      .limit(limit)
-      .offset(offset);
+    const pendaftaranList: Array<PendaftaranSIM & { satpas_name: string }> =
+      await query.limit(limit).offset(offset);
 
     // Get total count
     let countQuery = db(this.tableName).where('user_id', user_id);
@@ -242,9 +246,12 @@ export class PendaftaranSIMRepository {
   async findById(
     pendaftaran_id: string
   ): Promise<PendaftaranSIMResponse | null> {
-    const pendaftaran: PendaftaranSIM | undefined = await db(this.tableName)
-      .where({ pendaftaran_id })
-      .first();
+    const pendaftaran: (PendaftaranSIM & { satpas_name: string }) | undefined =
+      await db(this.tableName)
+        .select(`${this.tableName}.*`, 'satpas.name as satpas_name')
+        .leftJoin('satpas', `${this.tableName}.satpas_id`, 'satpas.satpas_id')
+        .where({ [`${this.tableName}.pendaftaran_id`]: pendaftaran_id })
+        .first();
 
     if (!pendaftaran) {
       return null;

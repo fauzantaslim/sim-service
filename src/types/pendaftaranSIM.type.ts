@@ -43,6 +43,7 @@ export type PendaftaranSIMResponse = Omit<
   PendaftaranSIM,
   'created_at' | 'updated_at'
 > & {
+  satpas_name: string; // Fetched from Satpas via foreign key
   created_at: string;
   updated_at: string;
 };
@@ -51,13 +52,14 @@ export type PendaftaranSIMResponse = Omit<
  * Konversi model PendaftaranSIM ke response format
  */
 export function toPendaftaranSIMResponse(
-  pendaftaran: PendaftaranSIM
+  pendaftaran: PendaftaranSIM & { satpas_name: string }
 ): PendaftaranSIMResponse {
   return {
     pendaftaran_id: pendaftaran.pendaftaran_id,
     kode_pendaftaran: pendaftaran.kode_pendaftaran,
     user_id: pendaftaran.user_id,
     satpas_id: pendaftaran.satpas_id,
+    satpas_name: pendaftaran.satpas_name,
     jenis_sim: pendaftaran.jenis_sim,
     tanggal_ujian: pendaftaran.tanggal_ujian,
     status: pendaftaran.status,
